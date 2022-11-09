@@ -1,25 +1,38 @@
 #pragma once
 
-#include <vector>
-#include <memory>
+#include "polling_base.hpp"
 
-#include "base.hpp"  // TODO
+#include <unordered_map>
 
 namespace NAsync {
 
-    class TPoller {
+    class TEpoll: public IPoller {
     public:
-        // Blocks thread
-        std::vector<const IIoObject*> WaitAvailableIos() const noexcept;
+        TEpoll() noexcept;
+        ~TEpoll() noexcept;
+        std::vector<TcIoPtr> WaitReadyIos(int timeoutInMs) const noexcept override;
+        void AddToWatchlist(TcIoPtr ioObject, TWatchlistOptions options) noexcept override;
+        void RemoveFromWatchlist(TcIoPtr ioObject) noexcept override;
 
-        // If edgeTriggered flag specified, then epoll will notify only on new data available
-        // E.g. if some data left in channel, then it won't trigger epoll again
-        void AddToWatchlist(const IIoObject* ioObject, bool edgeTriggered = false) const noexcept;
-        void RemoveFromWatchlist(const IIoObject* ioObject) const noexcept;
+        TcIoPtr GetObject(int fd) const noexcept;
 
     private:
-        class TEpollImpl;
-        std::unique_ptr<TEpollImpl> EpollPtr_;
+        static constexpr size_t EpollBufSize_ = 1000;
+
+        int EpollFd_;
+        std::unordered_map<int, TcIoPtr> FdObjectMapping_; // fd -> ioObject
     };
 
+    class TPoll: public IPoller {
+    public:
+        TPoll() noexcept;
+        ~TPoll() noexcept;
+        std::vector<TcIoPtr> WaitReadyIos(int timeoutInMs) const noexcept override;
+        void AddToWatchlist(TcIoPtr ioObject, TWatchlistOptions options) noexcept override;
+        void RemoveFromWatchlist(TcIoPtr ioObject) noexcept override;
+
+    private:
+        class TFdContainer;
+        TFdContainer* FdContainerPtr_;
+    };
 } // NAsync

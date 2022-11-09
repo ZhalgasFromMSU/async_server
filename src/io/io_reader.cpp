@@ -1,10 +1,19 @@
 #include "io_reader.hpp"
 
-#include <iostream>
 #include <unistd.h>
 #include <errno.h>
 
 namespace NAsync {
+
+    namespace {
+        ssize_t ReadToBuffer(int fd, char* buffer, size_t nBytes) noexcept {
+            ssize_t count = read(fd, buffer, nBytes);
+            if (count < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                std::terminate();
+            }
+            return count;
+        }
+    }
 
     TReader::TReader(int fd)
         : Fd_(fd)
@@ -14,28 +23,32 @@ namespace NAsync {
         : Fd_(ioObject.GetFd())
     {}
 
-    EReadResult TReader::operator>>(std::stringstream& output) && noexcept {
-        char buffer[BUFF_SIZE + 1]; // +1 for trailing '\0'
-        
+
+    EReadResult TReader::ReadChunkInto(std::ostream& output) && noexcept {
+        char buffer[BuffSize_];
+        ssize_t count = ReadToBuffer(Fd_, buffer, BuffSize_);
+        if (count < 0) {
+            return EReadResult::kReachedBlock;
+        } else if (count == 0) {
+            return EReadResult::kReachedEof;
+        } else {
+            output.write(buffer, count);
+            return EReadResult::kReadChunk;
+        }
+    }
+
+    EReadResult TReader::ReadInto(std::ostream& output) && noexcept {
+        char buffer[BuffSize_];
         ssize_t count;
         do {
-            count = read(Fd_, buffer, BUFF_SIZE);
-            if (count == 0) {
+            count = ReadToBuffer(Fd_, buffer, BuffSize_);
+            if (count < 0) {
+                return EReadResult::kReachedBlock;
+            } else if (count == 0) {
                 return EReadResult::kReachedEof;
-            } else if (count < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    return EReadResult::kNotReady;
-                } else {
-                    std::cerr << "Reading from file descriptor failed: " << errno << std::endl;
-                    std::terminate();
-                }
-            } else {
-                buffer[count] = 0;
-                output << buffer;
             }
-        } while (count == BUFF_SIZE);
-
-        return EReadResult::kReadChunk;
+            output.write(buffer, count);
+        } while (true);
     }
 
 } // namespace NAsync

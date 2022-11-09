@@ -8,4 +8,6 @@ namespace NAsync {
         virtual int GetFd() const noexcept = 0;
     };
 
+    using TcIoPtr = const IIoObject*;
+
 } // namespace NAsync

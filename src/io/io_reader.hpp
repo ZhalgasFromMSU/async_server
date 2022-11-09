@@ -1,14 +1,14 @@
 #pragma once
 
-#include <sstream>
+#include <ostream>
 
-#include "base.hpp"
+#include "io_base.hpp"
 
 namespace NAsync {
 
     enum class EReadResult {
         kReachedEof,
-        kNotReady, // only applicable to non-blocking descriptors. Means that not ready to read
+        kReachedBlock, // only applicable to non-blocking descriptors. Means that not ready to read
         kReadChunk,
     };
 
@@ -18,19 +18,13 @@ namespace NAsync {
         TReader(const IIoObject& ioObject);
         TReader(const TReader&) = delete;
 
-        // these overloads return false if EOF reached
-        template<typename T>
-        EReadResult operator>>(T& output) && noexcept {
-            std::stringstream tmp;  // extra allocations
-            EReadResult haveMoreData = (std::move(*this) >> tmp);
-            tmp >> output;
-            return haveMoreData;
-        }
+        EReadResult ReadChunkInto(std::ostream& output) && noexcept;
 
-        EReadResult operator>>(std::stringstream& output) && noexcept;
+        // Read until EOF or until block unblocking fd
+        EReadResult ReadInto(std::ostream& output) && noexcept;
 
     private:
-        static constexpr size_t BUFF_SIZE = 8192;
+        static constexpr size_t BuffSize_ = 8192;
 
         int Fd_;
     };

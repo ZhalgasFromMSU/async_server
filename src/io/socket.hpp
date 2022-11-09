@@ -1,12 +1,17 @@
 #pragma once
 
-#include "base.hpp"
+#include "io_base.hpp"
 
 namespace NAsync {
 
-    class TSocket: public IIoObject {
+    class TConnectionManager {
     public:
-        int GetFd() const noexcept override;
+        struct TSocketOptions {
+            bool Localhost;  // AF_LOCAL
+            bool UseIpV6;
+        };
+
+        TConnectionManager(TSocketOptions = {}) noexcept;
 
     private:
         int Fd_;

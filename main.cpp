@@ -1,14 +1,12 @@
 #include <iostream>
-#include "src/io/io_reader.hpp"
+#include <sstream>
 
-using namespace NAsync;
+#include <io/io_reader.hpp>
+
 
 int main() {
     std::stringstream ss;
-
-    while (TReader{0} >> ss != EReadResult::kReachedEof) {
-
-    }
-
+    NAsync::TReader{0}.ReadInto(ss);
+    std::cout << ss.str() << std::endl;
     return 0;
 }

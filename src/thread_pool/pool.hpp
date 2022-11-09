@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <future>
+#include <functional>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -41,7 +42,7 @@ namespace NAsync {
 
         template<typename TFunc, typename... TArgs>
         std::future<std::invoke_result_t<TFunc, TArgs...>> EnqueJob(TFunc&& func, TArgs&&... args) noexcept {
-            using TResult = std::invoke_result_t<std::decay_t<TFunc>, std::decayt_t<TArgs>...>;
+            using TResult = std::invoke_result_t<std::decay_t<TFunc>, std::decay_t<TArgs>...>;
             std::promise<TResult> promise;
             std::future<TResult> future = promise.get_future();
             {
