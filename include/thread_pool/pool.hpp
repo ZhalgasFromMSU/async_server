@@ -1,19 +1,17 @@
 #pragma once
 
 #include <atomic>
-#include <future>
-#include <functional>
 #include <mutex>
 #include <queue>
 #include <thread>
-#include <type_traits>
 #include <vector>
+#include <condition_variable>
 
 namespace NAsync {
 
     class ITask {
     public:
-        ~ITask() {}
+        virtual ~ITask() {}
 
         virtual void Execute() = 0;
     };
@@ -36,36 +34,30 @@ namespace NAsync {
     class TThreadPool {
     public:
         TThreadPool(size_t numThreads = std::thread::hardware_concurrency()) noexcept;
+        ~TThreadPool();
+
+        size_t JobsCount() const;
 
         void Start() noexcept;  // Create threads and start executing jobs
         void Finish() noexcept;  // Wait for threads to finish current jobs and stop enqueing
 
-        template<typename TFunc, typename... TArgs>
-        std::future<std::invoke_result_t<TFunc, TArgs...>> EnqueJob(TFunc&& func, TArgs&&... args) noexcept {
-            using TResult = std::invoke_result_t<std::decay_t<TFunc>, std::decay_t<TArgs>...>;
-            std::promise<TResult> promise;
-            std::future<TResult> future = promise.get_future();
-            {
-                std::scoped_lock lock {QueueMutex_};
-                JobsQueue_.emplace(new TTask(
-                    [promise = std::move(promise), func = std::bind(func, std::forward<TArgs>(args)...)]() mutable {
-                        promise.set_value(func());
-                    }
-                ));
-                JobsCV_.notify_one();
-            }
-            return future;
+        template<typename TFunc>
+        void EnqueJob(TFunc&& func) noexcept {
+            std::scoped_lock lock {QueueMutex_};
+            JobsQueue_.emplace(new TTask(std::forward<TFunc>(func)));
+            JobsCV_.notify_one();
+            return true;
         }
 
     private:
         void WorkerLoop() noexcept;
 
-        std::mutex QueueMutex_;
+        mutable std::mutex QueueMutex_;
         std::atomic<bool> PoolStopped_;
         std::condition_variable JobsCV_;
 
         std::vector<std::thread> Threads_;
-        std::queue<std::unique_ptr<ITask>> JobsQueue_;
+        std::queue<std::unique_ptr<ITask>> JobsQueue_; // make it lock-free
     };
 
 } // namespace NAsync
