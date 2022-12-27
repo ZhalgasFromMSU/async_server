@@ -2,31 +2,38 @@
 
 #include <gtest/gtest.h>
 
-// Demonstrate some basic assertions.
 TEST(ThreadPool, EnqueJob) {
-    size_t numJobs {1};
+    // Check that thread pool waits for all tasks to be finished
+    size_t numJobs {10};
     NAsync::TThreadPool threadPool {numJobs /* threads */};
     std::atomic<size_t> numCompleted {0};
 
-    auto incAfterSleep = [&numCompleted] {
-      numCompleted += 1;
-    };
-
     for (size_t i = 0; i < numJobs; ++i) {
-        threadPool.EnqueJob([&numCompleted, i] {
-            std::cerr << i << std::endl;
+        ASSERT_TRUE(threadPool.EnqueJob([&numCompleted, i, numJobs] {
             size_t check = numCompleted;
-            while (check < i) {
+            while (numJobs - 1 - i > check) {
                 numCompleted.wait(check);
                 check = numCompleted;
             }
             numCompleted += 1;
-        });
+            numCompleted.notify_all();
+        }));
     }
 
     ASSERT_EQ(numCompleted, 0);
-    ASSERT_EQ(threadPool.JobsCount(), numJobs);
+    ASSERT_EQ(threadPool.QueueSize(), numJobs);
     threadPool.Start();
     threadPool.Finish();
     ASSERT_EQ(numCompleted, numJobs);
+}
+
+TEST(ThreadPool, EnqueAfterFinish) {
+    // Check that thread pool will not accept new job if already finished
+
+    NAsync::TThreadPool threadPool {1};
+    threadPool.Finish();
+
+    ASSERT_FALSE(threadPool.EnqueJob([] {
+        return;
+    }));
 }

@@ -13,6 +13,24 @@ PUBLIC
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 
+# Compiler options
+add_compile_options(-Werror)
+
+# For debugging
+option(USE_THREAD_SANITIZER "Compile with thread sanitizer to detect data races")
+option(USE_ADDRESS_SANITIZER "Compile with address sanitizer to detect memory errors")
+
+if (USE_THREAD_SANITIZER)
+    add_compile_options(-fsanitize=thread)
+    add_link_options(-fsanitize=thread)
+endif()
+
+if (USE_ADDRESS_SANITIZER)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif()
+
+
 # Testing with GTEST
 include(FetchContent)
 FetchContent_Declare(
