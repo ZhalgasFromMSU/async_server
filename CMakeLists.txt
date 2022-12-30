@@ -9,6 +9,7 @@ add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME}
 PUBLIC
     src/thread_pool/pool.cpp
+    # src/polling/epoll.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
@@ -45,7 +46,12 @@ enable_testing()
 
 SET(TESTS_GROUP async_tests)
 
-add_executable(${TESTS_GROUP} tests/test_thread_pool.cpp)
+add_executable(${TESTS_GROUP}
+    tests/test_thread_pool.cpp
+    tests/test_polling.cpp
+    tests/test_utils.cpp
+)
+
 target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME})
 target_include_directories(${TESTS_GROUP} PRIVATE include)
 

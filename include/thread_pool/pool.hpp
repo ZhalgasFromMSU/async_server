@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -11,7 +10,7 @@
 namespace NAsync {
 
     template<typename TFunc>
-    concept CVoidToVoid = std::is_invocable_r_v<void, TFunc>; // TODO use_invoke_result_t instead of is_invocable_r, because of void
+    concept CVoidToVoid = std::is_same_v<void, std::invoke_result_t<TFunc>>;
 
     class ITask {
     public:
@@ -63,7 +62,7 @@ namespace NAsync {
         bool PoolStopped_ = false;
         std::condition_variable JobsCV_;
         std::vector<std::thread> Threads_;
-        std::queue<std::unique_ptr<ITask>> JobsQueue_;
+        std::queue<std::unique_ptr<ITask>> JobsQueue_; // TODO use lock-free list
     };
 
 } // namespace NAsync
