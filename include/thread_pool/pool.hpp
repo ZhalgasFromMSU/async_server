@@ -1,38 +1,14 @@
 #pragma once
 
+#include <util/task.hpp>
+
 #include <mutex>
 #include <queue>
 #include <thread>
 #include <vector>
 #include <condition_variable>
-#include <type_traits>
 
 namespace NAsync {
-
-    template<typename TFunc>
-    concept CVoidToVoid = std::is_same_v<void, std::invoke_result_t<TFunc>>;
-
-    class ITask {
-    public:
-        virtual ~ITask() {}
-
-        virtual void Execute() = 0;
-    };
-
-    template<CVoidToVoid TFunc>
-    class TTask: public ITask {
-    public:
-        TTask(TFunc func)
-            : Func_(std::move(func))
-        {}
-
-        void Execute() override {
-            Func_();
-        }
-
-    private:
-        TFunc Func_;
-    };
 
     class TThreadPool {
     public:

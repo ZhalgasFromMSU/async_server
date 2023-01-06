@@ -9,17 +9,18 @@ add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME}
 PUBLIC
     src/thread_pool/pool.cpp
-    # src/polling/epoll.cpp
+    src/polling/epoll.cpp
+    src/io/io_object.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 
 # Compiler options
-add_compile_options(-Werror)
+add_compile_options(-Werror -Wall -pedantic)
 
 # For debugging
 option(USE_THREAD_SANITIZER "Compile with thread sanitizer to detect data races")
-option(USE_ADDRESS_SANITIZER "Compile with address sanitizer to detect memory errors")
+option(USE_ADDRESS_SANITIZER "Compile with address sanitizer to detect memory errors" ON)
 
 if (USE_THREAD_SANITIZER)
     add_compile_options(-fsanitize=thread)
@@ -50,6 +51,7 @@ add_executable(${TESTS_GROUP}
     tests/test_thread_pool.cpp
     tests/test_polling.cpp
     tests/test_utils.cpp
+    tests/test_io.cpp
 )
 
 target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME})
