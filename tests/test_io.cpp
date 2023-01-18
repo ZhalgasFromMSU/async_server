@@ -1,4 +1,4 @@
-#include <io/io_object.hpp>
+#include <io/pipe.hpp>
 
 #include <sys/eventfd.h>
 #include <fcntl.h>
@@ -26,21 +26,16 @@ TEST(IoObject, ReadWrite) {
 }
 
 TEST(IoObject, PipeReadWrite) {
-    int pipeFds[2];
-    VERIFY_SYSCALL(pipe2(pipeFds, O_NONBLOCK) >= 0);
+    auto [readEnd, writeEnd] = NAsync::CreatePipe();
 
-    NAsync::TIoObject readEnd(pipeFds[0]);
-    NAsync::TIoObject writeEnd(pipeFds[1]);
-
-    constexpr int writeBufSize = 5;
-    const char* strToWrite = "12345";
-    auto writeResult = writeEnd.Write(strToWrite, writeBufSize);
+    const char strToWrite[] = "12345";
+    auto writeResult = writeEnd.Write(strToWrite, sizeof(strToWrite));
     VERIFY_RESULT(writeResult);
-    ASSERT_EQ(*writeResult, writeBufSize);
+    ASSERT_EQ(*writeResult, sizeof(strToWrite));
 
-    constexpr int readBufSize = writeBufSize * 3;
+    constexpr int readBufSize = sizeof(strToWrite) * 3;
     char readBuf[readBufSize];
     auto readResult = readEnd.Read(readBuf, readBufSize);
     VERIFY_RESULT(readResult);
-    ASSERT_EQ(*readResult, writeBufSize);
+    ASSERT_EQ(*readResult, sizeof(strToWrite));
 }

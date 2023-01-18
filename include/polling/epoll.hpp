@@ -1,6 +1,5 @@
 #pragma once
 
-#include <thread_pool/pool.hpp>
 #include <io/io_object.hpp>
 #include <util/list.hpp>
 
@@ -24,6 +23,8 @@ namespace NAsync {
         TEpoll() noexcept;
         ~TEpoll() noexcept;
 
+        size_t Size() const noexcept;
+
         // All callbacks are executed synchronously
         std::error_code WatchForRead(int fd, TCallback callback) noexcept;
         std::error_code WatchForWrite(int fd, TCallback callback) noexcept;
@@ -38,7 +39,7 @@ namespace NAsync {
 
         TList<std::pair<int, TCallback>> Callbacks_;
 
-        std::recursive_mutex EpollMutex_;
+        mutable std::recursive_mutex EpollMutex_;
         std::atomic<bool> ShouldFinish_ = false;
 
         std::future<void> EpollFuture_;

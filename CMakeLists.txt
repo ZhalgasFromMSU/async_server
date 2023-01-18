@@ -8,9 +8,12 @@ add_library(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME}
 PUBLIC
-    src/thread_pool/pool.cpp
+    src/thread/wait_group.cpp
+    src/thread/pool.cpp
     src/polling/epoll.cpp
     src/io/io_object.cpp
+    src/io/pipe.cpp
+    src/util/result.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
@@ -45,17 +48,18 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-SET(TESTS_GROUP async_tests)
+set(TESTS_GROUP async_tests)
 
 add_executable(${TESTS_GROUP}
-    tests/test_thread_pool.cpp
+    tests/test_thread.cpp
     tests/test_polling.cpp
     tests/test_utils.cpp
     tests/test_io.cpp
 )
 
 target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME})
-target_include_directories(${TESTS_GROUP} PRIVATE include)
+target_include_directories(${TESTS_GROUP} PRIVATE include tests)
 
+# Discover tests
 include(GoogleTest)
 gtest_discover_tests(${TESTS_GROUP})

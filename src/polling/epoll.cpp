@@ -54,6 +54,11 @@ namespace NAsync {
         VERIFY_EC(WatchForRead(EventFd_.Fd(), std::bind(&TEpoll::EventFdCallback, this)));
     }
 
+    size_t TEpoll::Size() const noexcept {
+        std::scoped_lock lock{EpollMutex_};
+        return Callbacks_.size() - 1;
+    }
+
     std::error_code TEpoll::WatchForRead(int fd, TCallback callback) noexcept {
         std::scoped_lock lock{EpollMutex_};
         Callbacks_.push_back({fd, std::move(callback)});

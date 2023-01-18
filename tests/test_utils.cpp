@@ -69,6 +69,11 @@ TEST(Result, NonCopyable) {
     ASSERT_EQ(inner.Val, 3);
 }
 
+TEST(Errors, Verify) {
+    VERIFY(1 < 2);
+    EXPECT_DEATH(VERIFY(1 > 2), "Assertion failed");
+}
+
 TEST(Errors, VerifySyscall) {
     VERIFY_SYSCALL(close(STDOUT_FILENO) >= 0);
     EXPECT_DEATH(VERIFY_SYSCALL(close(-1) >= 0), "Bad file descriptor");
