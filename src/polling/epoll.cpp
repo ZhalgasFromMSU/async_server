@@ -19,6 +19,18 @@ namespace NAsync {
             kWrite,
         };
 
+        int CreateEpollFd() noexcept {
+            int status = epoll_create1(0);
+            VERIFY_SYSCALL(status >= 0);
+            return status;
+        }
+
+        int CreateEventFd() noexcept {
+            int status = eventfd(0, EFD_NONBLOCK);
+            VERIFY_SYSCALL(status >= 0);
+            return status;
+        }
+
         int AddFdToEpoll(int epollFd, int fdToWatch, void* callbackAddr, EEpollMode mode) {
             epoll_event eventToAdd;
             memset(&eventToAdd, 0, sizeof(eventToAdd));
@@ -33,8 +45,8 @@ namespace NAsync {
     }
 
     TEpoll::TEpoll() noexcept
-        : EpollFd_{epoll_create1(0)}
-        , EventFd_{eventfd(0, EFD_NONBLOCK)}
+        : EpollFd_{CreateEpollFd()}
+        , EventFd_{CreateEventFd()}
         , EpollFuture_{std::async(&TEpoll::PollFunc, this)}
     {
         VERIFY_EC(WatchForRead(EventFd_.Fd(), std::bind(&TEpoll::EventFdCallback, this)));
@@ -55,7 +67,7 @@ namespace NAsync {
     }
 
     size_t TEpoll::Size() const noexcept {
-        std::scoped_lock lock{EpollMutex_};
+        std::scoped_lock lock{EpollMutex_}; // should use shared mutex here
         return Callbacks_.size() - 1;
     }
 

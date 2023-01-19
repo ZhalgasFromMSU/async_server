@@ -27,11 +27,11 @@ TEST(Polling, AddingOneFd) {
                 << "Actual value: " << readResult.Error().value() << ", message: " << readResult.Error().message();
 
     NAsync::TEpoll epoll;
-    epoll.WatchForRead(pipeRead.Fd(), [&] {
-        pipeRead.Read(output, size);
-    });
+    VERIFY_EC(epoll.WatchForRead(pipeRead.Fd(), [&] {
+        ASSERT_EQ(*pipeRead.Read(output, size), size);
+    }));
     ASSERT_EQ(strncmp(output, "\0\0\0\0", size), 0);
-    pipeWrite.Write(input, size);
+    ASSERT_EQ(*pipeWrite.Write(input, size), size);
     ASSERT_EQ(strcmp(input, output), 0) << "Actual output: " << output;
 }
 
