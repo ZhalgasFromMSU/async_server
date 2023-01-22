@@ -29,7 +29,6 @@ TEST_F(Epoll, StartAndShutdown) {
 }
 
 TEST_F(Epoll, Eventfd) {
-    TEpoll epoll;
     TEventFd eventfd;
 
     TWaitGroup wg;
