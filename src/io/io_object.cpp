@@ -7,7 +7,9 @@ namespace NAsync {
 
     TIoObject::TIoObject(int fd) noexcept
         : Fd_(fd)
-    {}
+    {
+        VERIFY(Fd_ >= 0);
+    }
 
     TIoObject& TIoObject::operator=(TIoObject&& other) noexcept {
         std::swap(Fd_, other.Fd_);

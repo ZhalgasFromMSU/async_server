@@ -41,7 +41,7 @@ const std::error_category& AssertionCategory() noexcept;
 
 namespace NAsync {
 
-    // analogue of rust's std::Result<T, E>
+    // analogue of rust's std::Result<T, E> or C++-23 std::expected
     template<typename T>
         requires (!std::is_same_v<T, void>)
     class TResult: public std::variant<T, std::error_code> {

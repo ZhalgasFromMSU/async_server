@@ -12,7 +12,7 @@ PUBLIC
     src/thread/pool.cpp
     src/polling/epoll.cpp
     src/io/io_object.cpp
-    src/io/pipe.cpp
+    src/io/well_known_structs.cpp
     src/util/result.cpp
 )
 

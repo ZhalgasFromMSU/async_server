@@ -9,7 +9,6 @@
 
 #include <system_error>
 #include <future>
-#include <iostream>
 
 namespace NAsync {
 
@@ -25,20 +24,14 @@ namespace NAsync {
             return status;
         }
 
-        int CreateEventFd() noexcept {
-            int status = eventfd(0, EFD_NONBLOCK);
-            VERIFY_SYSCALL(status >= 0);
-            return status;
-        }
-
-        int AddFdToEpoll(int epollFd, int fdToWatch, void* callbackAddr, EEpollMode mode) {
+        int AddFdToEpoll(int epollFd, int fdToWatch, EEpollMode mode) noexcept {
             epoll_event eventToAdd;
             memset(&eventToAdd, 0, sizeof(eventToAdd));
-            eventToAdd.data.ptr = callbackAddr;
+            eventToAdd.data.fd = fdToWatch;
             if (mode == EEpollMode::kRead) {
-                eventToAdd.events = EPOLLIN | EPOLLET;
+                eventToAdd.events = EPOLLIN | EPOLLET | EPOLLONESHOT; // not sure about epolloneshot, maybe do it under flag
             } else { // EEpollMode::kWrite
-                eventToAdd.events = EPOLLOUT | EPOLLET;
+                eventToAdd.events = EPOLLOUT | EPOLLET | EPOLLONESHOT;
             }
             return epoll_ctl(epollFd, EPOLL_CTL_ADD, fdToWatch, &eventToAdd);
         }
@@ -46,35 +39,23 @@ namespace NAsync {
 
     TEpoll::TEpoll() noexcept
         : EpollFd_{CreateEpollFd()}
-        , EventFd_{CreateEventFd()}
-        , EpollFuture_{std::async(&TEpoll::PollFunc, this)}
+        , EpollStopped_{false}
+        , EpollBackgroundThread_{&NAsync::TEpoll::PollLoop, this}
     {
-        VERIFY_EC(WatchForRead(EventFd_.Fd(), std::bind(&TEpoll::EventFdCallback, this)));
+        VERIFY_SYSCALL(AddFdToEpoll(EpollFd_.Fd(), EventFd_.Fd(), EEpollMode::kRead) >= 0);
     }
 
     TEpoll::~TEpoll() noexcept {
-        ShouldFinish_ = true;
-        uint64_t numToWrite = 1;
-        VERIFY_RESULT(EventFd_.Write(&numToWrite, sizeof(numToWrite)));
-        EpollFuture_.wait_for(std::chrono::seconds(1));
-        VERIFY_SYSCALL(close(EpollFd_) >= 0);
-    }
-
-    void TEpoll::EventFdCallback() noexcept {
-        uint64_t val;
-        VERIFY_RESULT(EventFd_.Read(&val, sizeof(val)));
-        VERIFY_EC(WatchForRead(EventFd_.Fd(), std::bind(&TEpoll::EventFdCallback, this)));
-    }
-
-    size_t TEpoll::Size() const noexcept {
-        std::scoped_lock lock{EpollMutex_}; // should use shared mutex here
-        return Callbacks_.size() - 1;
+        EpollStopped_ = true;
+        EventFd_.Set();
+        EpollBackgroundThread_.join();
     }
 
     std::error_code TEpoll::WatchForRead(int fd, TCallback callback) noexcept {
-        std::scoped_lock lock{EpollMutex_};
-        Callbacks_.push_back({fd, std::move(callback)});
-        if (AddFdToEpoll(EpollFd_, fd, Callbacks_.tail_pointer(), EEpollMode::kRead) < 0) {
+        std::scoped_lock lock{CallbacksMutex_};
+        auto it = Callbacks_.insert(Callbacks_.end(), std::move(callback));
+        FdIteratorMapping_[fd] = it;
+        if (AddFdToEpoll(EpollFd_.Fd(), fd, EEpollMode::kRead) < 0) { // epoll is thread safe
             return std::error_code{errno, std::system_category()};
         }
         return {};
@@ -82,26 +63,30 @@ namespace NAsync {
 
 
     std::error_code TEpoll::WatchForWrite(int fd, TCallback callback) noexcept {
-        std::scoped_lock lock{EpollMutex_};
-        Callbacks_.push_back({fd, std::move(callback)});
-        if (AddFdToEpoll(EpollFd_, fd, Callbacks_.tail_pointer(), EEpollMode::kWrite) < 0) {
+        std::scoped_lock lock{CallbacksMutex_};
+        auto it = Callbacks_.insert(Callbacks_.end(), std::move(callback));
+        FdIteratorMapping_[fd] = it;
+        if (AddFdToEpoll(EpollFd_.Fd(), fd, EEpollMode::kWrite) < 0) { // epoll is thread safe
             return std::error_code{errno, std::system_category()};
         }
         return {};
     }
 
-    void TEpoll::PollFunc() noexcept {
-        epoll_event buffer[EpollBuffSize_];
-        while (!ShouldFinish_) {
-            int count = epoll_wait(EpollFd_, buffer, EpollBuffSize_, -1);
-            std::scoped_lock lock{EpollMutex_};
-            VERIFY_SYSCALL(count >= 0);
-            for (int i = 0; i < count; ++i) {
-                auto callbackPtr = static_cast<TList<std::pair<int, TCallback>>::TNode*>(buffer[i].data.ptr);
-                auto& [fd, callback] = callbackPtr->Val();
-                VERIFY_SYSCALL(epoll_ctl(EpollFd_, EPOLL_CTL_DEL, fd, nullptr) >= 0);
-                callback();
-                Callbacks_.erase(callbackPtr);
+    void TEpoll::PollLoop() noexcept {
+        constexpr static size_t epollBuffSize = 1024;
+        epoll_event buffer[epollBuffSize];
+        while (true) {
+            int status = epoll_wait(EpollFd_.Fd(), buffer, epollBuffSize, -1);
+            VERIFY_SYSCALL(status >= 0);
+            if (EpollStopped_) {
+                break;
+            }
+            std::scoped_lock lock{CallbacksMutex_};
+            for (int i = 0; i < status; ++i) {
+                auto callbackIt = FdIteratorMapping_.at(buffer[i].data.fd);
+                (*callbackIt)();
+                FdIteratorMapping_.erase(buffer[i].data.fd);
+                Callbacks_.erase(callbackIt);
             }
         }
     }

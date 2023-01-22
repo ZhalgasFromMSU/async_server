@@ -16,6 +16,8 @@ namespace NAsync {
         TIoObject(TIoObject&& other) noexcept;
 
         int Fd() const noexcept;
+
+    protected:
         TResult<int> Write(const void* buf, int numBytesToWrite, int flags = 0) const noexcept;
         TResult<int> Read(void* buf, int numBytesToRead, int flags = 0) const noexcept;
 

@@ -76,7 +76,14 @@ TEST(WaitGroup, WaitFail) {
     wg.Add(1);
 
     std::future<bool> waitResult = std::async(&NAsync::TWaitGroup::WaitFor, &wg, std::chrono::microseconds(1000));
-    std::this_thread::sleep_for(std::chrono::microseconds(2000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     ASSERT_EQ(waitResult.wait_for(std::chrono::seconds::zero()), std::future_status::ready);
     ASSERT_EQ(waitResult.get(), false);
+}
+
+TEST(WaitGroup, Terminate) {
+    NAsync::TWaitGroup wg;
+    wg.Add(1);
+    wg.Done();
+    EXPECT_DEATH(wg.Done(), "Assertion failed");
 }

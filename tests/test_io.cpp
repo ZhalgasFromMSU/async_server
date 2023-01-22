@@ -1,4 +1,4 @@
-#include <io/pipe.hpp>
+#include <io/well_known_structs.hpp>
 
 #include <sys/eventfd.h>
 #include <fcntl.h>
@@ -7,7 +7,12 @@
 #include <gtest/gtest.h>
 
 TEST(IoObject, ReadWrite) {
-    NAsync::TIoObject ioObject(eventfd(0, EFD_NONBLOCK));
+
+    struct TCustomIoObject: NAsync::TIoObject {
+        using NAsync::TIoObject::Read;
+        using NAsync::TIoObject::Write;
+    } ioObject(eventfd(0, EFD_NONBLOCK));
+
     uint64_t val = 10;
     auto result1 = ioObject.Write(&val, sizeof(val));
     VERIFY_RESULT(result1);
@@ -37,5 +42,6 @@ TEST(IoObject, PipeReadWrite) {
     char readBuf[readBufSize];
     auto readResult = readEnd.Read(readBuf, readBufSize);
     VERIFY_RESULT(readResult);
+    ASSERT_EQ(strcmp(readBuf, strToWrite), 0);
     ASSERT_EQ(*readResult, sizeof(strToWrite));
 }
