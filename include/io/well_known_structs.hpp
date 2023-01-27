@@ -6,6 +6,7 @@ namespace NAsync {
 
     class TPipeInput: public TIoObject {
     public:
+        using TIoObject::TIoObject;
         using TIoObject::Write;
 
     protected:
@@ -14,6 +15,7 @@ namespace NAsync {
 
     class TPipeOutput: public TIoObject {
     public:
+        using TIoObject::TIoObject;
         using TIoObject::Read;
 
     protected:

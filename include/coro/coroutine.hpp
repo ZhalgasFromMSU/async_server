@@ -1,39 +1,69 @@
 #pragma once
 
+#include <polling/epoll.hpp>
+#include <thread/pool.hpp>
+
 #include <coroutine>
+#include <future>
 
 namespace NAsync {
 
-    // This coroutines are like rusts coroutines
+    /*
+        Rust-like Coroutines
+
+        1) Coroutines live for as long as TCoroFuture object lives
+        2) Coroutines live for as long as
+    */
     template<typename T>
-    class TCoroutine {
+    class TCoroFuture: protected std::future<T> {
     public:
-        struct promise_type {
-            std::suspend_always initial_suspend() noexcept {
-                return {};
-            }
+        using std::future<T>::future;
+    };
 
-            std::suspend_always final_suspend() noexcept {
-                return {};
-            }
+    template<typename T>
+    class TPromiseBase: protected std::promise<T> {
+    public:
+        TPromiseBase(TEpoll& epoll, TThreadPool& threadPool) noexcept
+            : Epoll_{epoll}
+            , ThreadPool_{threadPool}
+        {}
 
-            void unhandled_exception() {
-                throw;
-            }
+        std::suspend_always initial_suspend() noexcept {
+            return {};
+        }
 
-            void return_void() {
-                return;
-            }
+        std::suspend_never final_suspend() noexcept {
+            return {};
+        }
 
-            TCoroutine get_return_object() {
-                return TCoroutine{*this};
-            }
-        };
+        void unhandled_exception() {
+            throw;
+        }
 
-        T RunToCompletion();
+        TCoroFuture<T> get_return_object() noexcept {
+            return TCoroFuture<T>{*this};
+        }
 
     private:
-        promise_type Promise_;
+        TEpoll& Epoll_;
+        TThreadPool& ThreadPool_;
+    };
+
+    template<typename T>
+    class TPromise: public TPromiseBase<T> {
+    public:
+        template<typename TReturnValue>
+        void return_value(TReturnValue&& ret) {
+            set_value(std::forward(ret));
+        }
+    };
+
+    template<>
+    class TPromise<void>: public TPromiseBase<void> {
+    public:
+        void return_void() {
+            set_value();
+        }
     };
 
 }

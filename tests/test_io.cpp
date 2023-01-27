@@ -9,6 +9,7 @@
 TEST(IoObject, ReadWrite) {
 
     struct TCustomIoObject: NAsync::TIoObject {
+        using NAsync::TIoObject::TIoObject;
         using NAsync::TIoObject::Read;
         using NAsync::TIoObject::Write;
     } ioObject(eventfd(0, EFD_NONBLOCK));

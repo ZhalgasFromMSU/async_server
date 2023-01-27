@@ -14,6 +14,7 @@ PUBLIC
     src/io/io_object.cpp
     src/io/well_known_structs.cpp
     src/util/result.cpp
+    src/coro/awaitable.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
