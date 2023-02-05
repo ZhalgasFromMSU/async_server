@@ -44,6 +44,8 @@ namespace NAsync {
             return TPollableAwaitable<TPollable>{std::forward<TPollable>(pollable), Epoll_, ThreadPool_};
         }
 
+        // TODO Add await transform for TCoroFuture for nested coroutines
+
     private:
         using std::promise<T>::get_future;
 
