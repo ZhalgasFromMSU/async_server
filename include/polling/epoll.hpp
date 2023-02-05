@@ -21,8 +21,8 @@ namespace NAsync {
         ~TEpoll() noexcept;
 
         // All callbacks are executed synchronously
-        std::error_code WatchForRead(int fd, TCallback callback) noexcept;
-        std::error_code WatchForWrite(int fd, TCallback callback) noexcept;
+        std::error_code WatchForRead(const TIoObject& io, TCallback callback) noexcept;
+        std::error_code WatchForWrite(const TIoObject& io, TCallback callback) noexcept;
 
         // Should probably add RemoveFromWatchlist method, to skip callback execution if socket was closed
 

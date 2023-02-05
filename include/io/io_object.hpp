@@ -6,7 +6,7 @@ namespace NAsync {
 
     class TIoObject {
     public:
-        explicit TIoObject(int fd) noexcept;
+        explicit TIoObject(int fd = -1) noexcept;
         ~TIoObject() noexcept;
 
         TIoObject& operator=(const TIoObject&) = delete;
@@ -17,11 +17,11 @@ namespace NAsync {
 
         int Fd() const noexcept;
 
-        TResult<int> Write(const void* buf, int numBytesToWrite, int flags = 0) const noexcept;
-        TResult<int> Read(void* buf, int numBytesToRead, int flags = 0) const noexcept;
-
-    private:
-        int Fd_ = -1;
+    protected:
+        int Fd_;
     };
+
+    TResult<int> Read(const TIoObject& ioObject, void* buf, int num, int flags = 0) noexcept;
+    TResult<int> Write(const TIoObject& ioObject, const void* buf, int num, int flags = 0) noexcept;
 
 } // namespace NAsync

@@ -4,28 +4,19 @@
 
 namespace NAsync {
 
-    class TPipeInput: public TIoObject {
+    class TPipe {
     public:
-        using TIoObject::TIoObject;
-        using TIoObject::Write;
+        static TPipe Create() noexcept;
 
-    protected:
-        TResult<int> Read(void* buf, int numBytesToRead, int flags = 0) const noexcept = delete;
+        const TIoObject& ReadEnd() const noexcept;
+        const TIoObject& WriteEnd() const noexcept;
+
+    private:
+        TPipe(int readFd, int writeFd) noexcept;
+
+        TIoObject WriteEnd_;
+        TIoObject ReadEnd_;
     };
-
-    class TPipeOutput: public TIoObject {
-    public:
-        using TIoObject::TIoObject;
-        using TIoObject::Read;
-
-    protected:
-        TResult<int> Write(const void* buf, int numBytesToWrite, int flags = 0) const noexcept = delete;
-    };
-
-
-    std::pair<TPipeOutput, TPipeInput> CreatePipe() noexcept;
-    // First is writeFd, second is readFd. This way readFd will be closed first
-    std::pair<TPipeInput, TPipeOutput> CreateReversedPipe() noexcept;
 
     // Eventfd is not readable by default
     class TEventFd: public TIoObject {

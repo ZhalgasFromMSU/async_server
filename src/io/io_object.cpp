@@ -30,30 +30,33 @@ namespace NAsync {
         return Fd_;
     }
 
-    TResult<int> TIoObject::Write(const void* buf, int numBytesToWrite, int flags) const noexcept {
+    TResult<int> Read(const TIoObject& ioObject, void* buf, int num, int flags) noexcept {
         int status;
         if (flags) {
-            status = send(Fd_, buf, numBytesToWrite, flags);
+            status = recv(ioObject.Fd(), buf, num, flags);
         } else {
-            status = write(Fd_, buf, numBytesToWrite);
+            status = read(ioObject.Fd(), buf, num);
         }
+
         if (status < 0) {
             return std::error_code{errno, std::system_category()};
         }
         return status;
     }
 
-    TResult<int> TIoObject::Read(void* buf, int numBytesToRead, int flags) const noexcept {
+    TResult<int> Write(const TIoObject& ioObject, const void* buf, int num, int flags) noexcept {
         int status;
         if (flags) {
-            status = recv(Fd_, buf, numBytesToRead, flags);
+            status = send(ioObject.Fd(), buf, num, flags);
         } else {
-            status = read(Fd_, buf, numBytesToRead);
+            status = write(ioObject.Fd(), buf, num);
         }
+
         if (status < 0) {
             return std::error_code{errno, std::system_category()};
         }
         return status;
     }
+
 
 } // namespace NAsync

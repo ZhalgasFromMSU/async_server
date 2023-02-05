@@ -18,24 +18,23 @@ namespace NAsync {
         }
     }
 
-    std::pair<TPipeOutput, TPipeInput> CreatePipe() noexcept {
+    TPipe::TPipe(int readFd, int writeFd) noexcept
+        : WriteEnd_{writeFd}
+        , ReadEnd_{readFd}
+    {}
+
+    TPipe TPipe::Create() noexcept {
         int pipeFds[2];
         VERIFY_SYSCALL(pipe2(pipeFds, O_NONBLOCK) == 0);
-        return std::pair<TPipeOutput, TPipeInput>{
-            std::piecewise_construct_t{},
-            std::forward_as_tuple(pipeFds[0]),
-            std::forward_as_tuple(pipeFds[1])
-        };
+        return TPipe(pipeFds[0], pipeFds[1]);
     }
 
-    std::pair<TPipeInput, TPipeOutput> CreateReversedPipe() noexcept {
-        int pipeFds[2];
-        VERIFY_SYSCALL(pipe2(pipeFds, O_NONBLOCK) == 0);
-        return std::pair<TPipeInput, TPipeOutput>{
-            std::piecewise_construct_t{},
-            std::forward_as_tuple(pipeFds[1]),
-            std::forward_as_tuple(pipeFds[0])
-        };
+    const TIoObject& TPipe::ReadEnd() const noexcept {
+        return ReadEnd_;
+    }
+
+    const TIoObject& TPipe::WriteEnd() const noexcept {
+        return WriteEnd_;
     }
 
     TEventFd::TEventFd() noexcept
@@ -49,13 +48,13 @@ namespace NAsync {
     void TEventFd::Set() noexcept {
         constexpr uint64_t numToWrite = 1;
         IsSet_ = true;
-        VERIFY_RESULT(Write(&numToWrite, sizeof(numToWrite))); // write to eventfd always returns 8 bytes, so no need to check retval
+        VERIFY_RESULT(Write(*this, &numToWrite, sizeof(numToWrite))); // write to eventfd always returns 8 bytes, so no need to check retval
     }
 
     void TEventFd::Reset() noexcept {
         uint64_t numToRead;
         IsSet_ = false;
-        VERIFY_RESULT(Read(&numToRead, sizeof(numToRead))); // read from eventfd always returns 8 bytes
+        VERIFY_RESULT(Read(*this, &numToRead, sizeof(numToRead))); // read from eventfd always returns 8 bytes
     }
 
 } // namespace NAsync

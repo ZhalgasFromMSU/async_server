@@ -51,22 +51,22 @@ namespace NAsync {
         EpollBackgroundThread_.join();
     }
 
-    std::error_code TEpoll::WatchForRead(int fd, TCallback callback) noexcept {
+    std::error_code TEpoll::WatchForRead(const TIoObject& io, TCallback callback) noexcept {
         std::scoped_lock lock{CallbacksMutex_};
         auto it = Callbacks_.insert(Callbacks_.end(), std::move(callback));
-        FdIteratorMapping_[fd] = it;
-        if (AddFdToEpoll(EpollFd_.Fd(), fd, EEpollMode::kRead) < 0) { // epoll is thread safe
+        FdIteratorMapping_[io.Fd()] = it;
+        if (AddFdToEpoll(EpollFd_.Fd(), io.Fd(), EEpollMode::kRead) < 0) { // epoll is thread safe
             return std::error_code{errno, std::system_category()};
         }
         return {};
     }
 
 
-    std::error_code TEpoll::WatchForWrite(int fd, TCallback callback) noexcept {
+    std::error_code TEpoll::WatchForWrite(const TIoObject& io, TCallback callback) noexcept {
         std::scoped_lock lock{CallbacksMutex_};
         auto it = Callbacks_.insert(Callbacks_.end(), std::move(callback));
-        FdIteratorMapping_[fd] = it;
-        if (AddFdToEpoll(EpollFd_.Fd(), fd, EEpollMode::kWrite) < 0) { // epoll is thread safe
+        FdIteratorMapping_[io.Fd()] = it;
+        if (AddFdToEpoll(EpollFd_.Fd(), io.Fd(), EEpollMode::kWrite) < 0) { // epoll is thread safe
             return std::error_code{errno, std::system_category()};
         }
         return {};

@@ -24,8 +24,8 @@ struct Epoll: testing::Test {
 };
 
 TEST_F(Epoll, StartAndShutdown) {
-    auto [write, read] = CreateReversedPipe();
-    epoll.WatchForRead(read.Fd(), {});
+    auto pipe = TPipe::Create();
+    epoll.WatchForRead(pipe.ReadEnd(), {});
 }
 
 TEST_F(Epoll, Eventfd) {
@@ -34,7 +34,7 @@ TEST_F(Epoll, Eventfd) {
     TWaitGroup wg;
     wg.Add(1);
 
-    epoll.WatchForRead(eventfd.Fd(), [&wg] {
+    epoll.WatchForRead(eventfd, [&wg] {
         wg.Done();
     });
 
@@ -43,25 +43,25 @@ TEST_F(Epoll, Eventfd) {
 }
 
 TEST_F(Epoll, AddingOneFd) {
-    auto [pipeWrite, pipeRead] = CreateReversedPipe();
+    auto pipe = TPipe::Create();
 
     const char input[] = "1234";
     constexpr int size = sizeof(input);
     char output[size];
     memset(output, 0, size);
 
-    auto readResult = pipeRead.Read(output, size);
+    auto readResult = Read(pipe.ReadEnd(), output, size);
     // check that can't read right now
     ASSERT_EQ(readResult.Error(), std::error_code(EAGAIN, std::system_category()));
 
     TWaitGroup wg;
     wg.Add(1);
-    VERIFY_EC(epoll.WatchForRead(pipeRead.Fd(), [&] {
-        ASSERT_EQ(*pipeRead.Read(output, size), size);
+    VERIFY_EC(epoll.WatchForRead(pipe.ReadEnd(), [&] {
+        ASSERT_EQ(*Read(pipe.ReadEnd(), output, size), size);
         wg.Done();
     }));
     ASSERT_EQ(strncmp(output, "\0\0\0\0", size), 0);
-    ASSERT_EQ(*pipeWrite.Write(input, size), size);
+    ASSERT_EQ(*Write(pipe.WriteEnd(), input, size), size);
     wg.WaitFor(std::chrono::milliseconds(100));
     ASSERT_EQ(strcmp(input, output), 0);
 }
@@ -71,7 +71,7 @@ TEST_F(Epoll, EventRemovedFromWatchlist) {
 
     TWaitGroup wg;
     wg.Add(1);
-    epoll.WatchForRead(eventfd.Fd(), [&wg, &eventfd] {
+    epoll.WatchForRead(eventfd, [&wg, &eventfd] {
         eventfd.Reset();
         wg.Done();
     });
@@ -90,7 +90,7 @@ TEST_F(Epoll, MultipleFds) {
     TWaitGroup wg;
     std::atomic<int> value;
     for (int i = 0; i < numEvents; ++i) {
-        epoll.WatchForRead(eventFds[i].Fd(), [&value, &wg, i] {
+        epoll.WatchForRead(eventFds[i], [&value, &wg, i] {
             value = i;
             wg.Done();
         });
@@ -127,7 +127,7 @@ TEST_F(Epoll, MultipleFdsAsync) {
                 TWaitGroup wg;
                 TEventFd eventfd;
                 wg.Add(1);
-                epoll.WatchForRead(eventfd.Fd(), [&counter, &wg, i] {
+                epoll.WatchForRead(eventfd, [&counter, &wg, i] {
                     counter += i;
                     wg.Done();
                 });

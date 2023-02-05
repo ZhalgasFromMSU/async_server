@@ -12,9 +12,9 @@ PUBLIC
     src/thread/pool.cpp
     src/polling/epoll.cpp
     src/io/io_object.cpp
+    src/io/pollable_object.cpp
     src/io/well_known_structs.cpp
     src/util/result.cpp
-    src/coro/awaitable.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
@@ -56,7 +56,7 @@ add_executable(${TESTS_GROUP}
     tests/test_polling.cpp
     tests/test_utils.cpp
     tests/test_io.cpp
-    # tests/test_coro.cpp
+    tests/test_coro.cpp
 )
 
 target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME})
