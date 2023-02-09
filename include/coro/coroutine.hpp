@@ -11,20 +11,26 @@ namespace NAsync {
     public:
         using promise_type = TPromise<T>;
 
-        TCoroFuture(TPromise<T>* promise) noexcept
+        TCoroFuture(promise_type* promise) noexcept
             : Promise_{promise}
         {}
 
-        void Run() noexcept {
-
+        std::future<T> Run() noexcept {
+            auto handle = std::coroutine_handle<promise_type>::from_promise(Promise_);
+            if (Promise_.Executor) {
+                VERIFY(Promise_->ThreadPool->EnqueJob(std::move(handle)));
+            } else {
+                handle();
+            }
+            return {};
         }
 
-        void SetExecutor() noexcept {
-
+        void SetExecutor(TThreadPool* threadPool) const noexcept {
+            Promise_->ThreadPool = threadPool;
         }
 
     private:
-        TPromise<T>* Promise_;
+        promise_type* Promise_;
     };
 
 }

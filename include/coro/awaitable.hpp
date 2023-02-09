@@ -9,6 +9,8 @@ namespace NAsync {
     template<CPollable T>
     class TPollableAwaitable {
     public:
+        using TOptionalResult = std::invoke_result_t<decltype(&T::Try), T*>; // std::optional<T>
+
         TPollableAwaitable(const T& pollableObject, TEpoll* epoll, TThreadPool* threadPool) noexcept
             : PollableObject_{pollableObject}
             , Epoll_{epoll}
@@ -30,7 +32,7 @@ namespace NAsync {
             }
         }
 
-        TResult<int> await_resume() noexcept {
+        TOptionalResult::value_type await_resume() noexcept {
             if (MaybeResult_.has_value()) {
                 return std::move(*MaybeResult_);
             }
@@ -41,7 +43,17 @@ namespace NAsync {
         const T& PollableObject_;
         TEpoll* Epoll_;
         TThreadPool* ThreadPool_;
-        std::optional<TResult<int>> MaybeResult_;
+        TOptionalResult MaybeResult_;
+    };
+
+    template<typename T>
+    class TCoroFuture;
+
+    template<typename T>
+    class TFutureAwaitable {
+    public:
+
+    private:
     };
 
 } // namespace NAsync

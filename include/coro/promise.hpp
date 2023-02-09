@@ -35,13 +35,13 @@ namespace NAsync {
 
         template<typename... TArgs>
         TPromise(TEpoll* epoll, TArgs&&... /* args */) noexcept
-            : Epoll_{epoll}
+            : Epoll{epoll}
         {}
 
         template<typename... TArgs>
         TPromise(TEpoll* epoll, TThreadPool* threadPool, TArgs&&... /* args */) noexcept
-            : Epoll_{epoll}
-            , ThreadPool_{threadPool}
+            : Epoll{epoll}
+            , ThreadPool{threadPool}
         {}
 
         std::suspend_always initial_suspend() noexcept {
@@ -62,7 +62,7 @@ namespace NAsync {
 
         template<CPollable TPollable>
         TPollableAwaitable<TPollable> await_transform(TPollable&& pollable) noexcept {
-            return TPollableAwaitable<TPollable>{std::forward<TPollable>(pollable), Epoll_, ThreadPool_};
+            return TPollableAwaitable<TPollable>{std::forward<TPollable>(pollable), Epoll, ThreadPool};
         }
 
         // TODO Add await transform for TCoroFuture for nested coroutines
@@ -71,9 +71,8 @@ namespace NAsync {
         //     return ...;
         // }
 
-    private:
-        TEpoll* Epoll_;
-        TThreadPool* ThreadPool_ = nullptr;
+        TEpoll* Epoll;
+        TThreadPool* ThreadPool = nullptr;
     };
 
 } // namespace NAsync
