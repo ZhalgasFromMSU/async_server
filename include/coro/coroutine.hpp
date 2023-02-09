@@ -6,21 +6,25 @@
 
 namespace NAsync {
 
-    /*
-        Rust-like Coroutines
-
-        1) Coroutines live for as long as TCoroFuture object lives
-        2) Coroutines live for as long as
-    */
     template<typename T>
-    class TCoroFuture: public std::future<T> {
+    class TCoroFuture {
     public:
         using promise_type = TPromise<T>;
-        TCoroFuture(std::future<T> fut) noexcept {
+
+        TCoroFuture(TPromise<T>* promise) noexcept
+            : Promise_{promise}
+        {}
+
+        void Run() noexcept {
+
+        }
+
+        void SetExecutor() noexcept {
 
         }
 
     private:
+        TPromise<T>* Promise_;
     };
 
 }

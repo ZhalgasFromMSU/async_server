@@ -6,7 +6,6 @@
 #include <coro/awaitable.hpp>
 
 #include <coroutine>
-#include <iostream>
 
 namespace NAsync {
 
@@ -14,16 +13,38 @@ namespace NAsync {
     class TCoroFuture;
 
     template<typename T>
-    class TPromiseBase: protected std::promise<T> {
+    class TPromiseBase {
+    public:
+        template<typename TReturnVal>
+        void return_value(TReturnVal&& ret) {
+
+        }
+    };
+
+    template<>
+    class TPromiseBase<void> {
+    public:
+        void return_void() noexcept {
+
+        }
+    };
+
+    template<typename T>
+    class TPromise: public TPromiseBase<T> {
     public:
 
         template<typename... TArgs>
-        TPromiseBase(TEpoll& epoll, TThreadPool& threadPool, TArgs&&... args) noexcept
+        TPromise(TEpoll* epoll, TArgs&&... /* args */) noexcept
+            : Epoll_{epoll}
+        {}
+
+        template<typename... TArgs>
+        TPromise(TEpoll* epoll, TThreadPool* threadPool, TArgs&&... /* args */) noexcept
             : Epoll_{epoll}
             , ThreadPool_{threadPool}
         {}
 
-        std::suspend_never initial_suspend() noexcept {
+        std::suspend_always initial_suspend() noexcept {
             return {};
         }
 
@@ -36,7 +57,7 @@ namespace NAsync {
         }
 
         TCoroFuture<T> get_return_object() noexcept {
-            return TCoroFuture<T>{get_future()};
+            return TCoroFuture<T>{this};
         }
 
         template<CPollable TPollable>
@@ -45,33 +66,14 @@ namespace NAsync {
         }
 
         // TODO Add await transform for TCoroFuture for nested coroutines
+        // template<typename TOther>
+        // TFutureAwaitable<TOther> await_transform(TCoroFuture<TOther>&& future) noexcept {
+        //     return ...;
+        // }
 
     private:
-        using std::promise<T>::get_future;
-
-        TEpoll& Epoll_;
-        TThreadPool& ThreadPool_;
-    };
-
-    template<typename T>
-    class TPromise: public TPromiseBase<T> {
-    public:
-        using TPromiseBase<T>::TPromiseBase;
-
-        template<typename TReturnValue>
-        void return_value(TReturnValue&& ret) {
-            set_value(std::forward(ret));
-        }
-    };
-
-    template<>
-    class TPromise<void>: public TPromiseBase<void> {
-    public:
-        using TPromiseBase<void>::TPromiseBase;
-
-        void return_void() {
-            set_value();
-        }
+        TEpoll* Epoll_;
+        TThreadPool* ThreadPool_ = nullptr;
     };
 
 } // namespace NAsync

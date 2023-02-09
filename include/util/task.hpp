@@ -10,7 +10,7 @@ namespace NAsync {
 
     class ITask {
     public:
-        virtual ~ITask() {}
+        virtual ~ITask() = default;
 
         virtual void Execute() = 0;
     };

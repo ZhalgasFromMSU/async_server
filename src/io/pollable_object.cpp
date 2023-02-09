@@ -9,8 +9,8 @@ namespace NAsync {
         , Flags_{flags}
     {}
 
-    std::error_code TReadPollable::ScheduleToEpoll(TEpoll& epoll, TEpoll::TCallback callback) const noexcept {
-        return epoll.WatchForRead(Io_, std::move(callback));
+    std::error_code TReadPollable::ScheduleToEpoll(TEpoll* epoll, TEpoll::TCallback callback) const noexcept {
+        return epoll->WatchForRead(Io_, std::move(callback));
     }
 
     std::optional<TResult<int>> TReadPollable::Try() const noexcept {
@@ -28,8 +28,8 @@ namespace NAsync {
         , Flags_{flags}
     {}
 
-    std::error_code TWritePollable::ScheduleToEpoll(TEpoll& epoll, TEpoll::TCallback callback) const noexcept {
-        return epoll.WatchForWrite(Io_, std::move(callback));
+    std::error_code TWritePollable::ScheduleToEpoll(TEpoll* epoll, TEpoll::TCallback callback) const noexcept {
+        return epoll->WatchForWrite(Io_, std::move(callback));
     }
 
     std::optional<TResult<int>> TWritePollable::Try() const noexcept {

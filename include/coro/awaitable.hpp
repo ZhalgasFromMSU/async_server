@@ -9,7 +9,7 @@ namespace NAsync {
     template<CPollable T>
     class TPollableAwaitable {
     public:
-        TPollableAwaitable(const T& pollableObject, TEpoll& epoll, TThreadPool& threadPool) noexcept
+        TPollableAwaitable(const T& pollableObject, TEpoll* epoll, TThreadPool* threadPool) noexcept
             : PollableObject_{pollableObject}
             , Epoll_{epoll}
             , ThreadPool_{threadPool}
@@ -21,9 +21,13 @@ namespace NAsync {
         }
 
         void await_suspend(std::coroutine_handle<> handle) noexcept {
-            PollableObject_.ScheduleToEpoll(Epoll_, [this, handle = std::move(handle)] {
-                VERIFY(ThreadPool_.EnqueJob(handle));
-            });
+            if (ThreadPool_ != nullptr) {
+                PollableObject_.ScheduleToEpoll(Epoll_, [this, handle = std::move(handle)] {
+                    VERIFY(ThreadPool_->EnqueJob(handle));
+                });
+            } else {
+                PollableObject_.ScheduleToEpoll(Epoll_, handle);
+            }
         }
 
         TResult<int> await_resume() noexcept {
@@ -35,8 +39,8 @@ namespace NAsync {
 
     private:
         const T& PollableObject_;
-        TEpoll& Epoll_;
-        TThreadPool& ThreadPool_;
+        TEpoll* Epoll_;
+        TThreadPool* ThreadPool_;
         std::optional<TResult<int>> MaybeResult_;
     };
 
