@@ -7,19 +7,6 @@
 
 namespace NAsync {
 
-    template<typename T>
-    concept COptional = std::same_as<T, std::optional<typename T::value_type>>;
-
-    template<typename T>
-    concept CPollable = requires(
-        const T t,
-        TEpoll* epoll,
-        TEpoll::TCallback callback
-    ) {
-        { t.Try() } noexcept -> COptional;
-        { t.ScheduleToEpoll(epoll, callback) } -> std::same_as<std::error_code>; // TODO make this method noexcept also
-    };
-
     class TReadPollable {
     public:
         TReadPollable(const TIoObject& io, void* buf, int num, int flags = 0) noexcept;

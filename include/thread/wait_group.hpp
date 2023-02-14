@@ -13,6 +13,8 @@ namespace NAsync {
         void Done() noexcept;
 
         void Wait() noexcept;
+
+        // return true if waited successfuly (Counter_ == 0)
         bool WaitFor(std::chrono::microseconds timeout) noexcept;
 
     private:

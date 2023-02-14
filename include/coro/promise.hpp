@@ -13,26 +13,25 @@ namespace NAsync {
     class TCoroFuture;
 
     template<typename T>
-    class TPromiseBase {
+    class TPromiseBase: public std::promise<T> {
     public:
-        template<typename TReturnVal>
-        void return_value(TReturnVal&& ret) {
-
+        template<typename TResult>
+        void return_value(TResult&& result) {
+            std::promise<T>::set_value(std::forward<TResult>(result));
         }
     };
 
     template<>
-    class TPromiseBase<void> {
+    class TPromiseBase<void>: public std::promise<void> {
     public:
         void return_void() noexcept {
-
+            set_value();
         }
     };
 
     template<typename T>
     class TPromise: public TPromiseBase<T> {
     public:
-
         template<typename... TArgs>
         TPromise(TEpoll* epoll, TArgs&&... /* args */) noexcept
             : Epoll{epoll}
@@ -40,6 +39,18 @@ namespace NAsync {
 
         template<typename... TArgs>
         TPromise(TEpoll* epoll, TThreadPool* threadPool, TArgs&&... /* args */) noexcept
+            : Epoll{epoll}
+            , ThreadPool{threadPool}
+        {}
+
+        // these two constructors are for member function coroutines
+        template<typename TThis, typename... TArgs>
+        TPromise(TThis&& obj, TEpoll* epoll, TArgs&&...) noexcept
+            : Epoll{epoll}
+        {}
+
+        template<typename TThis, typename... TArgs>
+        TPromise(TThis&& obj, TEpoll* epoll, TThreadPool* threadPool, TArgs&&...) noexcept
             : Epoll{epoll}
             , ThreadPool{threadPool}
         {}

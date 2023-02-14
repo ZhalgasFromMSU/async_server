@@ -2,8 +2,6 @@
 
 #include <coro/promise.hpp>
 
-#include <future>
-
 namespace NAsync {
 
     template<typename T>
@@ -11,26 +9,23 @@ namespace NAsync {
     public:
         using promise_type = TPromise<T>;
 
-        TCoroFuture(promise_type* promise) noexcept
+        TCoroFuture(TPromise<T>* promise) noexcept
             : Promise_{promise}
         {}
 
-        std::future<T> Run() noexcept {
-            auto handle = std::coroutine_handle<promise_type>::from_promise(Promise_);
-            if (Promise_.Executor) {
-                VERIFY(Promise_->ThreadPool->EnqueJob(std::move(handle)));
+        std::future<T> Run() {
+            std::future<T> future = Promise_->get_future();
+            auto handle = std::coroutine_handle<TPromise<T>>::from_promise(*Promise_);
+            if (Promise_->ThreadPool != nullptr) {
+                VERIFY(Promise_->ThreadPool->EnqueJob(handle));
             } else {
                 handle();
             }
-            return {};
-        }
-
-        void SetExecutor(TThreadPool* threadPool) const noexcept {
-            Promise_->ThreadPool = threadPool;
+            return future;
         }
 
     private:
-        promise_type* Promise_;
+        TPromise<T>* Promise_;
     };
 
 }
