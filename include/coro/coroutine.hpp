@@ -24,6 +24,22 @@ namespace NAsync {
             return future;
         }
 
+        bool SetExecutor(TThreadPool* threadPool) const {
+            if (Promise_->ThreadPool) {
+                return false;
+            }
+            Promise_->ThreadPool = threadPool;
+            return true;
+        }
+
+        bool SetEpoll(TEpoll* epoll) const {
+            if (Promise_->Epoll) {
+                return false;
+            }
+            Promise_->Epoll = epoll;
+            return true;
+        }
+
     private:
         TPromise<T>* Promise_;
     };

@@ -15,7 +15,7 @@ struct Coro: ::testing::Test {
 };
 
 TEST_F(Coro, Coroutine) {
-    auto coro = [](TEpoll* epoll, TThreadPool* threadPool, TWaitGroup& wg, const TIoObject& pipeRead) -> TCoroFuture<void> {
+    auto coro = [](TWaitGroup& wg, const TIoObject& pipeRead) -> TCoroFuture<void> {
         char out[10];
         auto res = co_await TReadPollable(pipeRead, out, 3);
         out[*res] = 0;
@@ -28,7 +28,9 @@ TEST_F(Coro, Coroutine) {
     wg.Add(1);
 
     auto pipe = TPipe::Create();
-    TCoroFuture<void> task = coro(&Epoll, &ThreadPool, wg, pipe.ReadEnd());
+    TCoroFuture<void> task = coro(wg, pipe.ReadEnd());
+    task.SetEpoll(&Epoll);
+    task.SetExecutor(&ThreadPool);
     task.Run();
 
     Write(pipe.WriteEnd(), "123", 3);
@@ -36,7 +38,7 @@ TEST_F(Coro, Coroutine) {
 }
 
 TEST_F(Coro, Future) {
-    auto coro = [](TEpoll* epoll, TThreadPool* threadPool, const TIoObject& pipeRead) -> TCoroFuture<int> {
+    auto coro = [](const TIoObject& pipeRead) -> TCoroFuture<int> {
         char out[10];
         auto res = co_await TReadPollable(pipeRead, out, 3);
         out[*res] = 0;
@@ -44,7 +46,9 @@ TEST_F(Coro, Future) {
     };
 
     auto pipe = TPipe::Create();
-    TCoroFuture<int> task = coro(&Epoll, &ThreadPool, pipe.ReadEnd());
+    TCoroFuture<int> task = coro(pipe.ReadEnd());
+    task.SetEpoll(&Epoll);
+    task.SetExecutor(&ThreadPool);
     auto future = task.Run();
     Write(pipe.WriteEnd(), "123", 3);
     ASSERT_EQ(future.wait_for(std::chrono::seconds(1)), std::future_status::ready);
