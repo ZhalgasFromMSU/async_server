@@ -46,7 +46,6 @@ namespace NAsync {
 
         void SetExecutor(TThreadPool* threadPool) const noexcept {
             Promise_->ThreadPool = threadPool;
-        }
 
     private:
         TPromise<T>* Promise_;
