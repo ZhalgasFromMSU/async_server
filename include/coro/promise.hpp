@@ -32,29 +32,6 @@ namespace NAsync {
     template<typename T>
     class TPromise: public TPromiseBase<T> {
     public:
-        template<typename... TArgs>
-        TPromise(TEpoll* epoll, TArgs&&... /* args */) noexcept
-            : Epoll{epoll}
-        {}
-
-        template<typename... TArgs>
-        TPromise(TEpoll* epoll, TThreadPool* threadPool, TArgs&&... /* args */) noexcept
-            : Epoll{epoll}
-            , ThreadPool{threadPool}
-        {}
-
-        // these two constructors are for member function coroutines
-        template<typename TThis, typename... TArgs>
-        TPromise(TThis&& obj, TEpoll* epoll, TArgs&&...) noexcept
-            : Epoll{epoll}
-        {}
-
-        template<typename TThis, typename... TArgs>
-        TPromise(TThis&& obj, TEpoll* epoll, TThreadPool* threadPool, TArgs&&...) noexcept
-            : Epoll{epoll}
-            , ThreadPool{threadPool}
-        {}
-
         std::suspend_always initial_suspend() noexcept {
             return {};
         }
@@ -82,7 +59,7 @@ namespace NAsync {
         //     return ...;
         // }
 
-        TEpoll* Epoll;
+        TEpoll* Epoll = nullptr;
         TThreadPool* ThreadPool = nullptr;
     };
 

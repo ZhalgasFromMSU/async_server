@@ -65,8 +65,29 @@ namespace NAsync {
     template<typename T>
     class TFutureAwaitable {
     public:
+        TFutureAwaitable(const TCoroFuture<T>& coroFuture, TEpoll* epoll, TThreadPool* threadPool) noexcept
+            : CoroFuture_{coroFuture}
+        {
+            CoroFuture_->SetEpoll(epoll);
+            CoroFuture_->SetExecutor(threadPool);
+        }
+
+        bool await_ready() noexcept {
+            return false;
+        }
+
+        void await_suspend(std::coroutine_handle<> handle) noexcept {
+            CoroResult_ = CoroFuture_.Run(handle);
+        }
+
+        T await_resume() noexcept {
+            VERIFY(CoroResult_.wait_for(std::chrono::seconds::zero()) == std::future_status::ready);
+            return CoroResult_.get();
+        }
 
     private:
+        const TCoroFuture<T>& CoroFuture_;
+        std::future<T> CoroResult_;
     };
 
 } // namespace NAsync
