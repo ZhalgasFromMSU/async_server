@@ -7,9 +7,6 @@
 namespace NAsync {
 
     template<typename T>
-    class TCoroFuture;
-
-    template<typename T>
     concept COptional = std::same_as<T, std::optional<typename T::value_type>>;
 
     template<typename T>
@@ -25,7 +22,7 @@ namespace NAsync {
     template<CPollable T>
     class TPollableAwaitable {
     public:
-        using TOptionalResult = std::invoke_result_t<decltype(&T::Try), T*>; // std::optional
+        using TOptionalResult = std::invoke_result_t<decltype(&T::Try), T*>; // std::optional<T>
 
         TPollableAwaitable(const T& pollableObject, TEpoll* epoll, TThreadPool* threadPool) noexcept
             : PollableObject_{pollableObject}
@@ -61,6 +58,9 @@ namespace NAsync {
         TThreadPool* ThreadPool_;
         TOptionalResult MaybeResult_;
     };
+
+    template<typename T>
+    class TCoroFuture;
 
     template<typename T>
     class TFutureAwaitable {

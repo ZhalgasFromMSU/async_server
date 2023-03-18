@@ -53,11 +53,6 @@ namespace NAsync {
             return TPollableAwaitable<TPollable>{std::forward<TPollable>(pollable), Epoll, ThreadPool};
         }
 
-        template<typename TResult>
-        TFutureAwaitable<TResult> await_transform(TCoroFuture<T>&& coro) noexcept {
-            return {};
-        }
-
         // TODO Add await transform for TCoroFuture for nested coroutines
         // template<typename TOther>
         // TFutureAwaitable<TOther> await_transform(TCoroFuture<TOther>&& future) noexcept {
