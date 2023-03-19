@@ -1,7 +1,7 @@
 #pragma once
 
-#include <coro/awaitable.hpp>
 #include <coro/forward.hpp>
+#include <io/io_awaitable.hpp>
 
 #include <coroutine>
 
@@ -26,20 +26,31 @@ namespace NAsync {
             return TCoroFuture<T>{*this};
         }
 
-        template<CPollable TPollable>
-        TPollableAwaitable<TPollable> await_transform(TPollable&& pollable) noexcept {
-            return TPollableAwaitable<TPollable>{std::forward<TPollable>(pollable), *Epoll, *ThreadPool};
+        // template<CPollable TPollable>
+        // TPollableAwaitable<TPollable> await_transform(TPollable&& pollable) noexcept {
+        //     return TPollableAwaitable<TPollable>{std::forward<TPollable>(pollable), *Epoll, *ThreadPool};
+        // }
+
+        template<std::derived_from<TWithEpoll> TIoAwaitable>
+        TIoAwaitable&& await_transform(TIoAwaitable&& awaitable) noexcept {
+            if (!awaitable.Epoll) {
+                awaitable.Epoll = Epoll;
+            }
+            if (!awaitable.ThreadPool) {
+                awaitable.ThreadPool = ThreadPool;
+            }
+            return std::forward<TIoAwaitable>(awaitable);
         }
 
         template<typename TSubResult>
-        TFutureAwaitable<TSubResult> await_transform(TCoroFuture<TSubResult>&& subCoro) noexcept {
+        TCoroFuture<TSubResult>&& await_transform(TCoroFuture<TSubResult>&& subCoro) noexcept {
             if (!subCoro.Promise_.ThreadPool) {
                 subCoro.Promise_.ThreadPool = ThreadPool;
             }
             if (!subCoro.Promise_.Epoll) {
                 subCoro.Promise_.Epoll = Epoll;
             }
-            return TFutureAwaitable<TSubResult>{std::forward<TCoroFuture<TSubResult>>(subCoro)};
+            return std::forward<TCoroFuture<TSubResult>>(subCoro);
         }
 
         // Runtime

@@ -15,78 +15,106 @@ struct Coro: ::testing::Test {
     }
 };
 
-// TEST_F(Coro, Coroutine) {
-//     auto coro = [](TWaitGroup& wg, const TIoObject& pipeRead) -> TCoroFuture<void> {
-//         char out[10];
-//         auto res = co_await TReadPollable(pipeRead, out, 3);
-//         out[*res] = 0;
+struct TScopeGuard {
+    TScopeGuard(std::function<void()> onDestructor)
+        : OnDestructor(std::move(onDestructor))
+    {}
 
-//         wg.Done();
-//         co_return;
-//     };
+    ~TScopeGuard() {
+        OnDestructor();
+    }
 
-//     TWaitGroup wg;
-//     wg.Add(1);
+    std::function<void()> OnDestructor;
+};
 
-//     auto pipe = TPipe::Create();
-//     TCoroFuture<void> task = coro(wg, pipe.ReadEnd());
-//     task.SetEpoll(&Epoll);
-//     task.SetExecutor(&ThreadPool);
-//     task.Run();
+template<typename T>
+bool IsReady(std::future<T>& future) {
+    auto res = future.wait_for(std::chrono::seconds::zero());
+    VERIFY(res != std::future_status::deferred);
+    return res == std::future_status::ready;
+}
 
-//     Write(pipe.WriteEnd(), "123", 3);
-//     ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
-// }
-
-// TEST_F(Coro, Future) {
-//     auto coro = [](const TIoObject& pipeRead) -> TCoroFuture<int> {
-//         char out[10];
-//         auto res = co_await TReadPollable(pipeRead, out, 3);
-//         out[*res] = 0;
-//         co_return 1;
-//     };
-
-//     auto pipe = TPipe::Create();
-//     TCoroFuture<int> task = coro(pipe.ReadEnd());
-//     task.SetEpoll(&Epoll);
-//     task.SetExecutor(&ThreadPool);
-//     auto future = task.Run();
-//     Write(pipe.WriteEnd(), "123", 3);
-//     ASSERT_EQ(future.wait_for(std::chrono::seconds(1)), std::future_status::ready);
-//     ASSERT_EQ(future.get(), 1);
-// }
-
-// TEST_F(Coro, RecursiveCoro) {
-//     auto coro = [](const TIoObject& pipeRead) -> TCoroFuture<int> {
-//         auto innerCoro = [](const TIoObject& pipeRead) -> TCoroFuture<int> {
-//             char out[10];
-//             co_return *(co_await TReadPollable(pipeRead, out, 3));
-//         };
-
-//         co_return co_await innerCoro();
-//     };
-
-
-// }
-
-TEST_F(Coro, VoidCoro) {
-    auto coro = [this](const TIoObject& pipeOut) -> TCoroFuture<int> {
-        char out[10];
-        auto numRead = co_await TReadPollable(pipeOut, out, 3);
+TEST_F(Coro, Coro) {
+    auto coro = [](const TIoObject& pipeOut, TWaitGroup& wg) -> TCoroFuture<int> {
+        TScopeGuard guard{[&wg] { wg.Done(); }};
+        char out[1];
+        auto numRead = co_await TReadAwaitable(pipeOut, out, 1);
         co_return *numRead;
     };
 
+    TWaitGroup wg;
     TPipe pipe = TPipe::Create();
 
-    auto task = coro(pipe.ReadEnd());
+    auto task = coro(pipe.ReadEnd(), wg);
     task.SetEpoll(&Epoll);
     task.SetThreadPool(&ThreadPool);
+    wg.Add(1);
 
     auto future = task.Run();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    ASSERT_EQ(future.wait_for(std::chrono::seconds::zero()), std::future_status::timeout);
+    ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
+    ASSERT_FALSE(IsReady(future));
 
-    ASSERT_EQ(*Write(pipe.WriteEnd(), "123", 3), 3);
-    ASSERT_EQ(future.wait_for(std::chrono::seconds::zero()), std::future_status::ready);
-    ASSERT_EQ(future.get(), 3);
+    ASSERT_EQ(*Write(pipe.WriteEnd(), "1", 1), 1);
+    ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
+    ASSERT_TRUE(IsReady(future));
+    ASSERT_EQ(future.get(), 1);
+}
+
+TEST_F(Coro, VoidCoro) {
+    std::atomic<int> sharedNumRead;
+
+    auto coro = [&sharedNumRead](const TIoObject& pipeOut, TWaitGroup& wg) -> TCoroFuture<void> {
+        TScopeGuard guard{[&wg] { wg.Done(); }};
+        char out[1];
+        auto numRead = co_await TReadAwaitable(pipeOut, out, 1);
+        sharedNumRead = *numRead;
+        co_return;
+    };
+
+    TWaitGroup wg;
+    TPipe pipe = TPipe::Create();
+
+    auto task = coro(pipe.ReadEnd(), wg);
+    task.SetEpoll(&Epoll);
+    task.SetThreadPool(&ThreadPool);
+    wg.Add(1);
+
+    auto future = task.Run();
+    ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
+    ASSERT_FALSE(IsReady(future));
+
+    ASSERT_EQ(*Write(pipe.WriteEnd(), "1", 1), 1);
+    ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
+    ASSERT_TRUE(IsReady(future));
+    ASSERT_EQ(sharedNumRead, 1);
+}
+
+TEST_F(Coro, RecursiveCoro) {
+    auto coro = [this](const TIoObject& pipeOut, TWaitGroup& wg) -> TCoroFuture<int> {
+        TScopeGuard guard {[&wg] { wg.Done(); }};
+
+        auto innerCoro = [](const TIoObject& pipeOut) -> TCoroFuture<int> {
+            char out[1];
+            co_return *(co_await TReadAwaitable(pipeOut, out, 1));
+        };
+
+        co_return co_await innerCoro(pipeOut);
+    };
+
+    TWaitGroup wg;
+    TPipe pipe = TPipe::Create();
+
+    auto task = coro(pipe.ReadEnd(), wg);
+    task.SetEpoll(&Epoll);
+    task.SetThreadPool(&ThreadPool);
+    wg.Add(1);
+
+    auto future = task.Run();
+    ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
+    ASSERT_FALSE(IsReady(future));
+
+    ASSERT_EQ(*Write(pipe.WriteEnd(), "1", 1), 1);
+    ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
+    ASSERT_TRUE(IsReady(future));
+    ASSERT_EQ(future.get(), 1);
 }

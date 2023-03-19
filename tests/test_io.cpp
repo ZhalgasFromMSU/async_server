@@ -1,5 +1,5 @@
 #include <io/well_known_structs.hpp>
-#include <io/pollable_object.hpp>
+#include <io/io_awaitable.hpp>
 
 #include <sys/eventfd.h>
 #include <fcntl.h>
@@ -47,9 +47,9 @@ TEST(IoObject, PipeReadWrite) {
 TEST(IoObject, PollableObject) {
     auto pipe = TPipe::Create();
     char buffer[10];
-    TReadPollable read{pipe.ReadEnd(), buffer, sizeof(buffer)};
-    ASSERT_EQ(read.Try(), std::nullopt);
-    TWritePollable write{pipe.WriteEnd(), "1234", 4};
-    ASSERT_EQ(**write.Try(), 4);
-    ASSERT_EQ(**read.Try(), 4);
+    TReadAwaitable read{pipe.ReadEnd(), buffer, sizeof(buffer)};
+    ASSERT_FALSE(read.await_resume());
+    TWriteAwaitable write{pipe.WriteEnd(), "1234", 4};
+    ASSERT_EQ(*write.await_resume(), 4);
+    ASSERT_EQ(*read.await_resume(), 4);
 }

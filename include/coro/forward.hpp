@@ -23,6 +23,20 @@ namespace NAsync {
         void SetThreadPool(TThreadPool* threadPool) noexcept;
         void BindWaitingCoro(std::coroutine_handle<> handle) noexcept;
 
+        bool await_ready() const noexcept {
+            return false;
+        }
+
+        void await_suspend(std::coroutine_handle<> handle) noexcept {
+            BindWaitingCoro(handle);
+            StdFuture_ = Run();
+        }
+
+        T await_resume() noexcept {
+            VERIFY(StdFuture_.wait_for(std::chrono::seconds::zero()) == std::future_status::ready);
+            return StdFuture_.get();
+        }
+
     private:
         friend TPromiseBase<T>;
 
@@ -31,6 +45,7 @@ namespace NAsync {
         {}
 
         TPromiseBase<T>& Promise_;
+        std::future<T> StdFuture_;
     };
 
 }

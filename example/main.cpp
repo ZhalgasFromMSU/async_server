@@ -10,14 +10,13 @@ void foo(const int& i) {
 }
 
 template<typename T>
-void goo(T&& i) {
-    i += 1;
-    foo(std::forward<T>(i));
-}
+struct A {
+    const T& t;
+};
+
 
 int main() {
-    int i;
-    goo<int&>(i);
-    goo<int>(std::move(i));
+    int x;
+    A<int> a{.t = std::move(x)};
     return 0;
 }
