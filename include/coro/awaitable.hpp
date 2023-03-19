@@ -1,8 +1,7 @@
 #pragma once
 
 #include <io/pollable_object.hpp>
-
-#include <coroutine>
+#include <coro/forward.hpp>
 
 namespace NAsync {
 
@@ -12,7 +11,7 @@ namespace NAsync {
     template<typename T>
     concept CPollable = requires(
         const T t,
-        TEpoll* epoll,
+        TEpoll& epoll,
         TEpoll::TCallback callback
     ) {
         { t.Try() } noexcept -> COptional;
@@ -24,7 +23,7 @@ namespace NAsync {
     public:
         using TOptionalResult = std::invoke_result_t<decltype(&T::Try), T*>; // std::optional<T>
 
-        TPollableAwaitable(const T& pollableObject, TEpoll* epoll, TThreadPool* threadPool) noexcept
+        TPollableAwaitable(const T& pollableObject, TEpoll& epoll, TThreadPool& threadPool) noexcept
             : PollableObject_{pollableObject}
             , Epoll_{epoll}
             , ThreadPool_{threadPool}
@@ -36,13 +35,9 @@ namespace NAsync {
         }
 
         void await_suspend(std::coroutine_handle<> handle) noexcept {
-            if (ThreadPool_ != nullptr) {
-                PollableObject_.ScheduleToEpoll(Epoll_, [this, handle = std::move(handle)] {
-                    VERIFY(ThreadPool_->EnqueJob(handle));
-                });
-            } else {
-                PollableObject_.ScheduleToEpoll(Epoll_, handle);
-            }
+            PollableObject_.ScheduleToEpoll(Epoll_, [this, handle = std::move(handle)] {
+                VERIFY(ThreadPool_.EnqueJob(std::move(handle)));
+            });
         }
 
         TOptionalResult::value_type await_resume() noexcept {
@@ -54,39 +49,40 @@ namespace NAsync {
 
     private:
         const T& PollableObject_;
-        TEpoll* Epoll_;
-        TThreadPool* ThreadPool_;
+        TEpoll& Epoll_;
+        TThreadPool& ThreadPool_;
         TOptionalResult MaybeResult_;
     };
 
     template<typename T>
-    class TCoroFuture;
-
-    template<typename T>
     class TFutureAwaitable {
     public:
-        TFutureAwaitable(const TCoroFuture<T>& coroFuture, TEpoll* epoll, TThreadPool* threadPool) noexcept
+        TFutureAwaitable(TCoroFuture<T>& coroFuture) noexcept
             : CoroFuture_{coroFuture}
-        {
-            CoroFuture_->SetEpoll(epoll);
-            CoroFuture_->SetExecutor(threadPool);
-        }
+        {}
 
         bool await_ready() noexcept {
             return false;
         }
 
-        void await_suspend(std::coroutine_handle<> handle) noexcept {
-            CoroResult_ = CoroFuture_.Run(handle);
+        bool await_suspend(std::coroutine_handle<> handle) noexcept {
+            CoroFuture_.BindWaitingCoro(std::move(handle));
+            CoroResult_ = CoroFuture_.Run();
+            return !IsReady(CoroFuture_); // no need to suspend if ready
         }
 
         T await_resume() noexcept {
-            VERIFY(CoroResult_.wait_for(std::chrono::seconds::zero()) == std::future_status::ready);
+            VERIFY(IsReady(CoroFuture_));
             return CoroResult_.get();
         }
 
     private:
-        const TCoroFuture<T>& CoroFuture_;
+        template<typename TOther>
+        static bool IsReady(std::future<TOther>& future) noexcept {
+            return future.wait_for(std::chrono::seconds::zero()) == std::future_status::ready;
+        }
+
+        TCoroFuture<T>& CoroFuture_;
         std::future<T> CoroResult_;
     };
 

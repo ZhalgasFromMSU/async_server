@@ -11,7 +11,7 @@ namespace NAsync {
     public:
         TReadPollable(const TIoObject& io, void* buf, int num, int flags = 0) noexcept;
 
-        std::error_code ScheduleToEpoll(TEpoll* epoll, TEpoll::TCallback callback) const noexcept;
+        std::error_code ScheduleToEpoll(TEpoll& epoll, TEpoll::TCallback callback) const noexcept;
         std::optional<TResult<int>> Try() const noexcept;
 
     private:
@@ -25,7 +25,7 @@ namespace NAsync {
     public:
         TWritePollable(const TIoObject& io, const void* buf, int num, int flags = 0) noexcept;
 
-        std::error_code ScheduleToEpoll(TEpoll* epoll, TEpoll::TCallback callback) const noexcept;
+        std::error_code ScheduleToEpoll(TEpoll& epoll, TEpoll::TCallback callback) const noexcept;
         std::optional<TResult<int>> Try() const noexcept;
 
     private:

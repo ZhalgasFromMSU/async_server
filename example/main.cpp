@@ -1,20 +1,23 @@
 #include <iostream>
 
-struct A;
 
-struct B {
-    B(A a) {
-        a.foo();
-    }
-};
+void foo(int&& i) {
+    std::cerr << "&&\n";
+}
 
-struct A {
-    void foo() {
-        std::cerr << "Zdes\n";
-    }
-};
+void foo(const int& i) {
+    std::cerr << "const&\n";
+}
+
+template<typename T>
+void goo(T&& i) {
+    i += 1;
+    foo(std::forward<T>(i));
+}
 
 int main() {
-    B b{A()}w;
+    int i;
+    goo<int&>(i);
+    goo<int>(std::move(i));
     return 0;
 }
