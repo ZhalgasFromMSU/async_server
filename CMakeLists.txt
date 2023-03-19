@@ -13,7 +13,6 @@ PUBLIC
     src/polling/epoll.cpp
     src/io/io_object.cpp
     src/io/io_awaitable.cpp
-    # src/io/pollable_object.cpp
     src/io/well_known_structs.cpp
     src/util/result.cpp
 )
