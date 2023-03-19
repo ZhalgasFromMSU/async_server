@@ -1,22 +1,8 @@
-#include <iostream>
-
-
-void foo(int&& i) {
-    std::cerr << "&&\n";
-}
-
-void foo(const int& i) {
-    std::cerr << "const&\n";
-}
-
-template<typename T>
-struct A {
-    const T& t;
-};
+#include <experimental/coroutine>
 
 
 int main() {
-    int x;
-    A<int> a{.t = std::move(x)};
+    std::experimental::coroutine_handle<> s;
+    std::cerr << bool(s) << std::endl;
     return 0;
 }
