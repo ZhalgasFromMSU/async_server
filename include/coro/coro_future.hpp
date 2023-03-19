@@ -16,6 +16,8 @@ namespace std {
 }
 
 #  endif
+#elif
+#include <coroutine>
 #endif
 
 namespace NAsync {
