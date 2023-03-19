@@ -3,8 +3,6 @@
 #include <polling/epoll.hpp>
 #include <thread/pool.hpp>
 
-#include <iostream>
-
 #include <coroutine>
 
 namespace NAsync {

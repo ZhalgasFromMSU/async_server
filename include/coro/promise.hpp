@@ -3,8 +3,6 @@
 #include <coro/coro_future.hpp>
 #include <io/io_awaitable.hpp>
 
-#include <coroutine>
-
 namespace NAsync {
 
     template<typename T>
