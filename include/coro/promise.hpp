@@ -1,6 +1,6 @@
 #pragma once
 
-#include <coro/forward.hpp>
+#include <coro/coro_future.hpp>
 #include <io/io_awaitable.hpp>
 
 #include <coroutine>
@@ -25,11 +25,6 @@ namespace NAsync {
         TCoroFuture<T> get_return_object() noexcept {
             return TCoroFuture<T>{*this};
         }
-
-        // template<CPollable TPollable>
-        // TPollableAwaitable<TPollable> await_transform(TPollable&& pollable) noexcept {
-        //     return TPollableAwaitable<TPollable>{std::forward<TPollable>(pollable), *Epoll, *ThreadPool};
-        // }
 
         template<std::derived_from<TWithEpoll> TIoAwaitable>
         TIoAwaitable&& await_transform(TIoAwaitable&& awaitable) noexcept {
@@ -70,7 +65,11 @@ namespace NAsync {
         void return_value(TResult&& res) noexcept {
             this->StdPromise.set_value(std::forward<TResult>(res));
             if (this->WaitingCoro) {
-                VERIFY(this->ThreadPool->EnqueJob(this->WaitingCoro));
+                if (this->ThreadPool) {
+                    VERIFY(this->ThreadPool->EnqueJob(this->WaitingCoro));
+                } else {
+                    this->WaitingCoro();
+                }
             }
         }
 
@@ -78,7 +77,11 @@ namespace NAsync {
         void return_value(TResult&& res) {
             this->StdPromise.set_value(std::forward<TResult>(res));
             if (this->WaitingCoro) {
-                VERIFY(this->ThreadPool->EnqueJob(this->WaitingCoro));
+                if (this->ThreadPool) {
+                    VERIFY(this->ThreadPool->EnqueJob(this->WaitingCoro));
+                } else {
+                    this->WaitingCoro();
+                }
             }
         }
     };
@@ -89,16 +92,36 @@ namespace NAsync {
         void return_void() noexcept {
             StdPromise.set_value();
             if (WaitingCoro) {
-                VERIFY(ThreadPool->EnqueJob(WaitingCoro));
+                if (this->ThreadPool) {
+                    VERIFY(this->ThreadPool->EnqueJob(this->WaitingCoro));
+                } else {
+                    this->WaitingCoro();
+                }
             }
         }
     };
 
     template<typename T>
     std::future<T> TCoroFuture<T>::Run() noexcept {
-        std::future<T> future = Promise_.StdPromise.get_future();
-        VERIFY(Promise_.ThreadPool->EnqueJob(std::coroutine_handle<TPromiseBase<T>>::from_promise(Promise_)));
+        auto future = Promise_.StdPromise.get_future();
+        auto handle = std::coroutine_handle<TPromiseBase<T>>::from_promise(Promise_);
+        if (Promise_.ThreadPool) {
+            VERIFY(Promise_.ThreadPool->EnqueJob(std::move(handle)));
+        } else {
+            handle();
+        }
         return future; // we first create future, because coroutine can be dead by the time we reach return statement
+    }
+
+    template<typename T>
+    void TCoroFuture<T>::Run(std::future<T>& future) noexcept {
+        future = Promise_.StdPromise.get_future();
+        auto handle = std::coroutine_handle<TPromiseBase<T>>::from_promise(Promise_);
+        if (Promise_.ThreadPool) {
+            VERIFY(Promise_.ThreadPool->EnqueJob(std::move(handle)));
+        } else {
+            handle();
+        }
     }
 
     template<typename T>

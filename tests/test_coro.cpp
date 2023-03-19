@@ -89,7 +89,7 @@ TEST_F(Coro, VoidCoro) {
     ASSERT_EQ(sharedNumRead, 1);
 }
 
-TEST_F(Coro, RecursiveCoro) {
+TEST_F(Coro, NestedCoro) {
     auto coro = [this](const TIoObject& pipeOut, TWaitGroup& wg) -> TCoroFuture<int> {
         TScopeGuard guard {[&wg] { wg.Done(); }};
 
@@ -115,6 +115,69 @@ TEST_F(Coro, RecursiveCoro) {
 
     ASSERT_EQ(*Write(pipe.WriteEnd(), "1", 1), 1);
     ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
+    ASSERT_TRUE(IsReady(future));
+    ASSERT_EQ(future.get(), 1);
+}
+
+TEST_F(Coro, WithoutEpoll) {
+    auto coro = []() -> TCoroFuture<int> {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        co_return 1;
+    };
+
+    auto task = coro();
+    task.SetThreadPool(&ThreadPool);
+
+    auto future = task.Run();
+    ASSERT_FALSE(IsReady(future));
+    future.wait_for(std::chrono::milliseconds(1500));
+    ASSERT_TRUE(IsReady(future));
+    ASSERT_EQ(future.get(), 1);
+}
+
+TEST_F(Coro, WithoutThreadPool) {
+    auto coro = [](const TIoObject& pipeRead, TWaitGroup& wg) -> TCoroFuture<int> {
+        TScopeGuard guard{[&wg] { wg.Done(); }};
+        char out[1];
+        co_return *(co_await TReadAwaitable(pipeRead, out, 1));
+    };
+
+    TWaitGroup wg;
+    TPipe pipe = TPipe::Create();
+    auto task = coro(pipe.ReadEnd(), wg);
+    task.SetEpoll(&Epoll);
+    wg.Add(1);
+
+    auto future = task.Run();
+    ASSERT_FALSE(IsReady(future));
+    ASSERT_EQ(*Write(pipe.WriteEnd(), "1", 1), 1);
+    wg.WaitFor(std::chrono::seconds(1));
+    ASSERT_TRUE(IsReady(future));
+    ASSERT_EQ(future.get(), 1);
+}
+
+TEST_F(Coro, WithoutEpollAndThreadPool) {
+    auto coro = []() -> TCoroFuture<int> {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        co_return 1;
+    };
+
+    auto future = coro().Run();
+    ASSERT_TRUE(IsReady(future));
+    ASSERT_EQ(future.get(), 1);
+}
+
+TEST_F(Coro, NestedCoroWithoutEpollAndThreadPool) {
+    auto coro = []() -> TCoroFuture<int> {
+        auto nestedCoro = []() -> TCoroFuture<int> {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            co_return 1;
+        };
+
+        co_return co_await nestedCoro();
+    };
+
+    auto future = coro().Run();
     ASSERT_TRUE(IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }

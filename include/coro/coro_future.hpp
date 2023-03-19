@@ -3,6 +3,8 @@
 #include <polling/epoll.hpp>
 #include <thread/pool.hpp>
 
+#include <iostream>
+
 #include <coroutine>
 
 namespace NAsync {
@@ -19,6 +21,7 @@ namespace NAsync {
         using promise_type = TPromise<T>;
 
         std::future<T> Run() noexcept;
+
         void SetEpoll(TEpoll* epoll) noexcept;
         void SetThreadPool(TThreadPool* threadPool) noexcept;
         void BindWaitingCoro(std::coroutine_handle<> handle) noexcept;
@@ -29,7 +32,7 @@ namespace NAsync {
 
         void await_suspend(std::coroutine_handle<> handle) noexcept {
             BindWaitingCoro(handle);
-            StdFuture_ = Run();
+            Run(StdFuture_); // program will terminate if Run() was called before
         }
 
         T await_resume() noexcept {
@@ -43,6 +46,9 @@ namespace NAsync {
         TCoroFuture(TPromiseBase<T>& promise) noexcept
             : Promise_{promise}
         {}
+
+        // Overload without parameters can before std::future returns from function, leading to data races
+        void Run(std::future<T>& future) noexcept;
 
         TPromiseBase<T>& Promise_;
         std::future<T> StdFuture_;
