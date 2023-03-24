@@ -1,6 +1,8 @@
 #include <thread/wait_group.hpp>
 #include <polling/epoll.hpp>
 #include <io/well_known_structs.hpp>
+#include <io/read.hpp>
+#include <io/write.hpp>
 
 #include <gtest/gtest.h>
 

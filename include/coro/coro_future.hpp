@@ -2,6 +2,7 @@
 
 #include <polling/epoll.hpp>
 #include <thread/pool.hpp>
+#include <util/result.hpp>
 
 #if defined __has_include
 #  if __has_include (<coroutine>)

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <util/result.hpp>
-
 namespace NAsync {
 
     class TIoObject {
@@ -20,8 +18,5 @@ namespace NAsync {
     protected:
         int Fd_;
     };
-
-    TResult<int> Read(const TIoObject& ioObject, void* buf, int num, int flags = 0) noexcept;
-    TResult<int> Write(const TIoObject& ioObject, const void* buf, int num, int flags = 0) noexcept;
 
 } // namespace NAsync

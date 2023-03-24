@@ -1,32 +1,21 @@
-#include <io/io_awaitable.hpp>
+#include <io/write.hpp>
+
+#include <sys/socket.h>
 
 namespace NAsync {
 
-    // TReadAwaitable
-    bool TReadAwaitable::await_ready() noexcept {
-        TResult<int> result = Read(IoObject_, Buf_, Num_, Flags_);
-        if (!result && (result.Error().value() == EWOULDBLOCK || result.Error().value() == EAGAIN)) {
-            return false;
-        }
-        Result_ = std::move(result);
-        return true;
-    }
-
-    void TReadAwaitable::await_suspend(std::coroutine_handle<> handle) const noexcept {
-        if (ThreadPool) {
-            Epoll->WatchForRead(IoObject_, [&] {
-                VERIFY(ThreadPool->EnqueJob(handle));
-            });
+    TResult<int> Write(const TIoObject& ioObject, const void* buf, int num, int flags) noexcept {
+        int status;
+        if (flags) {
+            status = send(ioObject.Fd(), buf, num, flags);
         } else {
-            Epoll->WatchForRead(IoObject_, handle);
+            status = write(ioObject.Fd(), buf, num);
         }
-    }
 
-    TResult<int> TReadAwaitable::await_resume() noexcept {
-        if (Result_.has_value()) {
-            return std::move(*Result_);
+        if (status < 0) {
+            return std::error_code{errno, std::system_category()};
         }
-        return Read(IoObject_, Buf_, Num_, Flags_);
+        return status;
     }
 
     // TWriteAwaitable
@@ -56,4 +45,4 @@ namespace NAsync {
         return Write(IoObject_, Buf_, Num_, Flags_);
     }
 
-}
+} // namespace NAsync

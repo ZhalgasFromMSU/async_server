@@ -1,6 +1,9 @@
 #include <coro/coroutine.hpp>
 #include <thread/wait_group.hpp>
 #include <io/well_known_structs.hpp>
+#include <io/read.hpp>
+#include <io/write.hpp>
+#include <util/result.hpp>
 
 #include <gtest/gtest.h>
 
