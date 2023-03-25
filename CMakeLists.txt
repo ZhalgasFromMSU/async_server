@@ -15,6 +15,7 @@ PUBLIC
     src/io/read.cpp
     src/io/write.cpp
     src/io/well_known_structs.cpp
+    src/socket/address.cpp
     src/util/result.cpp
 )
 
@@ -58,6 +59,7 @@ add_executable(${TESTS_GROUP}
     tests/test_utils.cpp
     tests/test_io.cpp
     tests/test_coro.cpp
+    tests/test_net.cpp
 )
 
 target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME})
