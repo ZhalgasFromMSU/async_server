@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sock_types.hpp"
 #include <util/result.hpp>
 
 #include <vector>
@@ -8,24 +9,14 @@
 
 namespace NAsync {
 
-    enum class EDomain {
-        kIPv4,
-        kIPv6,
-        kUnix,
-    };
-
-    enum class ESockType {
-        kTcp,
-        kUdp,
-    };
-
     class TResolver;
+    class TSocket;
 
-    class TSocketDescription {
+    class TSockDescr {
     public:
-        TSocketDescription(TSocketDescription&&) noexcept;
-        TSocketDescription& operator=(TSocketDescription&&) noexcept;
-        ~TSocketDescription();
+        TSockDescr(TSockDescr&&) noexcept;
+        TSockDescr& operator=(TSockDescr&&) noexcept;
+        ~TSockDescr();
 
         inline EDomain Domain() const noexcept {
             return Domain_;
@@ -35,7 +26,7 @@ namespace NAsync {
             return Type_;
         }
 
-        inline int Port() const noexcept {
+        inline uint16_t Port() const noexcept {
             return Port_;
         }
 
@@ -43,12 +34,15 @@ namespace NAsync {
             return StrAddr_;
         }
 
+        TSocket CreateSocket() && noexcept;
+
     private:
         friend class TResolver;
+        friend class TSocket;
 
         struct TAddrInfo; // addrinfo
 
-        TSocketDescription(TAddrInfo&& addrInfo) noexcept;
+        TSockDescr(TAddrInfo&& addrInfo) noexcept;
 
         std::unique_ptr<TAddrInfo> AddrInfo_;
         EDomain Domain_;
@@ -57,11 +51,10 @@ namespace NAsync {
         uint16_t Port_ = 0;
     };
 
-    using TResolveResult = TResult<std::vector<TSocketDescription>>;
+    using TResolveResult = TResult<std::vector<TSockDescr>>;
 
     class TResolver {
     public:
-
         static TResolveResult ResolveSync(const char* node, const char* service, std::optional<EDomain> domain, std::optional<ESockType> sockType) noexcept;
     };
 

@@ -16,6 +16,8 @@ PUBLIC
     src/io/write.cpp
     src/io/well_known_structs.cpp
     src/socket/resolve.cpp
+    src/socket/socket.cpp
+    src/socket/sock_types.cpp
     src/util/result.cpp
 )
 

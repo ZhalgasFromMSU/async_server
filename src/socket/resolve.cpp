@@ -1,4 +1,5 @@
 #include <socket/resolve.hpp>
+#include <socket/socket.hpp>
 
 #include <netdb.h>
 #include <sys/socket.h>
@@ -7,7 +8,6 @@
 #include <cstring>
 
 #include <variant>
-#include <iostream>
 
 namespace NAsync {
 
@@ -29,55 +29,12 @@ namespace NAsync {
 
         const TResolveCategory resolveCategory{};
 
-        int ConvertDomain(const std::optional<EDomain>& domain) noexcept {
-            if (!domain) {
-                return AF_INET | AF_INET6;
-            } else if (*domain == EDomain::kIPv4) {
-                return AF_INET;
-            } else if (*domain == EDomain::kIPv6) {
-                return AF_INET6;
-            } else if (*domain == EDomain::kUnix) {
-                return AF_UNIX;
-            }
-            VERIFY(false);
-        }
-
-        EDomain ToDomain(int domain) noexcept {
-            if (domain == AF_INET) {
-                return EDomain::kIPv4;
-            } else if (domain == AF_INET6) {
-                return EDomain::kIPv6;
-            } else if (domain == AF_UNIX) {
-                return EDomain::kUnix;
-            }
-            VERIFY(false);
-        }
-
-        int ConvertSockType(const std::optional<ESockType>& type) {
-            if (!type) {
-                return SOCK_STREAM | SOCK_DGRAM;
-            } else if (*type == ESockType::kTcp) {
-                return SOCK_STREAM;
-            } else if (*type == ESockType::kUdp) {
-                return SOCK_DGRAM;
-            }
-            VERIFY(false);
-        }
-
-        ESockType ToSockType(int type) {
-            if (type == SOCK_STREAM) {
-                return ESockType::kTcp;
-            } else if (type == SOCK_DGRAM) {
-                return ESockType::kUdp;
-            }
-            VERIFY(false);
-        }
     }
 
-    struct TSocketDescription::TAddrInfo: public addrinfo {
+    struct TSockDescr::TAddrInfo: public addrinfo {
     };
 
-    TSocketDescription::TSocketDescription(TAddrInfo&& addrInfo) noexcept
+    TSockDescr::TSockDescr(TAddrInfo&& addrInfo) noexcept
         : AddrInfo_{std::make_unique<TAddrInfo>(std::move(addrInfo))}
         , Domain_{ToDomain(AddrInfo_->ai_family)}
         , Type_{ToSockType(AddrInfo_->ai_socktype)}
@@ -106,16 +63,31 @@ namespace NAsync {
         }
     }
 
-    TSocketDescription::TSocketDescription(TSocketDescription&&) noexcept = default;
-    TSocketDescription& TSocketDescription::operator=(TSocketDescription&&) noexcept = default;
-    TSocketDescription::~TSocketDescription() = default;
+    TSockDescr::TSockDescr(TSockDescr&&) noexcept = default;
+    TSockDescr& TSockDescr::operator=(TSockDescr&&) noexcept = default;
+    TSockDescr::~TSockDescr() = default;
+
+    TSocket TSockDescr::CreateSocket() && noexcept {
+        return TSocket{std::move(*this)};
+    }
 
     TResolveResult TResolver::ResolveSync(const char* node, const char* service, std::optional<EDomain> domain, std::optional<ESockType> type) noexcept {
         addrinfo* lookupResult;
         addrinfo hints;
         memset(&hints, 0, sizeof(hints));
-        hints.ai_family = ConvertDomain(domain);
-        hints.ai_socktype = ConvertSockType(type);
+        if (domain) {
+            hints.ai_family = FromDomain(*domain);
+        }
+
+        if (type) {
+            hints.ai_socktype = FromSockType(*type);
+        } else {
+            hints.ai_socktype = AF_UNSPEC;
+        }
+
+        if (node == nullptr) {
+            hints.ai_flags = AI_PASSIVE;
+        }
 
         int status = getaddrinfo(node, service, &hints, &lookupResult);
         if (status != 0) {
@@ -124,13 +96,7 @@ namespace NAsync {
 
         TResolveResult::Type resolveResult;
         for (auto ai = lookupResult; ai != nullptr; ai = ai->ai_next) {
-            if (ai->ai_family == AF_INET) {
-                std::cerr << "Zdes\t" << static_cast<sockaddr_in*>((void*)ai->ai_addr)->sin_port << std::endl;
-            } else if (ai->ai_family == AF_INET6) {
-                std::cerr << "Zdes6\t" << static_cast<sockaddr_in6*>((void*)ai->ai_addr)->sin6_port << std::endl;
-            }
-
-            TSocketDescription descr {std::move(*static_cast<TSocketDescription::TAddrInfo*>(ai))};
+            TSockDescr descr {std::move(*static_cast<TSockDescr::TAddrInfo*>(ai))};
             resolveResult.emplace_back(std::move(descr));
         }
         freeaddrinfo(lookupResult);

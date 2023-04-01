@@ -4,11 +4,30 @@
 
 using namespace NAsync;
 
-TEST(Socket, Resolve) {
-    auto ret = TResolver::ResolveSync("localhost", "83", {}, ESockType::kUdp);
-    ASSERT_TRUE(ret) << ret.Error().message();
+void CheckSocket(const TSockDescr& descr, const std::string& ipStr, uint16_t port, EDomain domain, ESockType type) {
+    ASSERT_EQ(descr.Domain(), domain);
+    ASSERT_EQ(descr.Port(), port);
+    ASSERT_EQ(descr.Type(), type);
+    ASSERT_EQ(descr.StrAddr(), ipStr);
+}
 
-    for (const auto& er : *ret) {
-        std::cerr << er.StrAddr() << '\t' << er.Port() << std::endl;
+TEST(Resolve, Localhost) {
+    auto ret = TResolver::ResolveSync("localhost", "1234", EDomain::kIPv4, ESockType::kTcp);
+    ASSERT_TRUE(ret) << ret.Error().message();
+    ASSERT_EQ(ret->size(), 1);
+    CheckSocket(ret->at(0), "127.0.0.1", 1234, EDomain::kIPv4, ESockType::kTcp);
+}
+
+TEST(Resolve, AnyAddr) {
+    {
+        auto ret = TResolver::ResolveSync(nullptr, "1234", EDomain::kIPv6, ESockType::kUdp);
+        ASSERT_TRUE(ret) << ret.Error().message();
+        CheckSocket(ret->at(0), "::", 1234, EDomain::kIPv6, ESockType::kUdp);
+    }
+
+    {
+        auto ret = TResolver::ResolveSync(nullptr, "1234", EDomain::kIPv4, ESockType::kUdp);
+        ASSERT_TRUE(ret) << ret.Error().message();
+        CheckSocket(ret->at(0), "0.0.0.0", 1234, EDomain::kIPv4, ESockType::kUdp);
     }
 }
