@@ -1,45 +1,29 @@
 #pragma once
 
-#include <socket/address.hpp>
-#include <io/io_awaitable_base.hpp>
+#include "resolve.hpp"
 
-#include <coroutine>
-#include <optional>
+#include <memory>
 
 namespace NAsync {
+    enum class EDomain {
+        kIpV4,
+        kIpV6,
+        kUnix,
+    };
 
-    class TConnectAwaitable;
-    class TAcceptAwaitable;
+    enum class ESockType {
+        kUdp,
+        kTcp,
+        kRaw,
+    };
 
     class TSocket {
     public:
-        enum class EDomain {
-            kLocal,
-            kIpV4,
-            kIpV6,
-        };
-
-        enum class ESocketType {
-            kTcp,
-            kUdp,
-        };
-
-        TSocket(EDomain domain, ESocketType type) noexcept;
-
-    };
-
-    class TConnectAwaitable: public TWithEpoll {
-    public:
-        TConnectAwaitable(const TSocket& socket, const TAddress& address);
-
-        bool await_ready() noexcept;
-        void await_suspend(std::coroutine_handle<> handle) noexcept;
-        std::error_code await_resume() noexcept; // on success error_code is empty
+        explicit TSocket(TSocketAddress addr) noexcept;
 
     private:
-        const TSocket& Socket_;
-        const TAddress& Address_;
-        std::optional<std::error_code> ConnectionError_;
+        TSocketAddress Addr_;
+        int Fd_ = 0;
     };
 
 } // namespace NAsync

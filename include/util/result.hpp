@@ -48,6 +48,8 @@ namespace NAsync {
         using TBase = std::variant<T, std::error_code>;
 
     public:
+        using Type = T;
+
         using TBase::TBase;
 
         operator bool() const {

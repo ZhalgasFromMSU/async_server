@@ -7,19 +7,27 @@
 
 namespace NAsync {
 
-    class IAddress { // sockaddr_in and sockaddr_in6 implement this interface
+    class TIpAddress {
     public:
-        virtual ~IAddress() = default;
+        explicit TIpAddress(std::string ipAddr) noexcept;
 
-        virtual std::string ToString() const = 0;
+        inline bool IsIPv6() const noexcept {
+            return IsIPv6_;
+        }
 
-        // Pure bytes and sizeof underlying sockaddr
-        virtual std::pair<const uint8_t*, size_t> ToBytes() const = 0;
+        inline const std::string& ToString() const noexcept {
+            return IpAddress_;
+        }
+
+    private:
+        bool IsIPv6_;
+        std::string IpAddress_;
     };
 
-    using TResolveResult = TResult<std::vector<std::shared_ptr<IAddress>>>;
+    // using TResolveResult = TResult<std::vector<std::shared_ptr<IAddress>>>;
+    // const std::error_category& resolve_category() noexcept;
 
-    TResolveResult ResolveSync(const char* node, const char* service) noexcept;
+    // TResolveResult ResolveSync(const char* node, const char* service, EDomain domain) noexcept;
     // TODO Write async resolve (getaddrinfo_a)
 
 } // namespace NAsync
