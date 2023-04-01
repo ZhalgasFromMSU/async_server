@@ -5,7 +5,7 @@
 using namespace NAsync;
 
 TEST(Socket, Resolve) {
-    auto ret = TResolver::ResolveSync("localhost", "83", {}, {});
+    auto ret = TResolver::ResolveSync("localhost", "83", {}, ESockType::kUdp);
     ASSERT_TRUE(ret) << ret.Error().message();
 
     for (const auto& er : *ret) {

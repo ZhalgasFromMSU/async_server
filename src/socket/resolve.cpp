@@ -90,12 +90,12 @@ namespace NAsync {
             const void* src;
             if (Domain_ == EDomain::kIPv4) {
                 sockaddr_in* addr = static_cast<sockaddr_in*>((void*)AddrInfo_->ai_addr);
-                Port_ = addr->sin_port;
+                Port_ = ntohs(addr->sin_port);
                 src = &addr->sin_addr;
                 domain = AF_INET;
             } else {
                 sockaddr_in6* addr = static_cast<sockaddr_in6*>((void*)AddrInfo_->ai_addr);
-                Port_ = addr->sin6_port;
+                Port_ = ntohs(addr->sin6_port);
                 src = &addr->sin6_addr;
                 domain = AF_INET6;
             }
