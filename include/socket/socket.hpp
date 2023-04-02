@@ -1,6 +1,6 @@
 #pragma once
 
-#include "resolve.hpp"
+#include "socket_descr.hpp"
 #include <io/io_object.hpp>
 
 namespace NAsync {

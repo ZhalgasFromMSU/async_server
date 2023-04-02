@@ -10,7 +10,7 @@
 namespace NAsync {
 
     TSocket::TSocket(TSockDescr descr) noexcept
-        : TIoObject{socket(FromDomain(Descr_.Domain()), FromSockType(Descr_.Type()), 0)}
+        : TIoObject{socket(FromDomain(Descr_.Domain()), FromSockType(Descr_.Type()) | SOCK_NONBLOCK, 0)}
         , Descr_{std::move(descr)}
     {}
 
@@ -25,13 +25,13 @@ namespace NAsync {
         socklen_t size;
         switch (Descr_.Domain()) {
             case EDomain::kIPv4:
-                size = sizeof(sockaddr_in());
+                size = sizeof(sockaddr_in);
                 break;
             case EDomain::kIPv6:
-                size = sizeof(sockaddr_in6());
+                size = sizeof(sockaddr_in6);
                 break;
             case EDomain::kUnix:
-                size = sizeof(sockaddr_un());
+                size = sizeof(sockaddr_un);
                 break;
             default:
                 VERIFY(false);

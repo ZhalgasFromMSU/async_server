@@ -7,7 +7,9 @@ namespace NAsync {
 
     class TConnectAwaitable: public TWithEpoll {
     public:
-        TConnectAwaitable(const TSocket& socket) noexcept;
+        inline explicit TConnectAwaitable(const TSocket& socket) noexcept
+            : Socket_{socket}
+        {}
 
     private:
         const TSocket& Socket_;

@@ -17,7 +17,7 @@ PUBLIC
     src/io/well_known_structs.cpp
     src/socket/resolve.cpp
     src/socket/socket.cpp
-    src/socket/sock_types.cpp
+    src/socket/socket_descr.cpp
     src/util/result.cpp
 )
 
