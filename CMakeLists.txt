@@ -15,6 +15,8 @@ PUBLIC
     src/io/read.cpp
     src/io/write.cpp
     src/io/well_known_structs.cpp
+    src/socket/accept.cpp
+    src/socket/connect.cpp
     src/socket/resolve.cpp
     src/socket/socket.cpp
     src/socket/socket_descr.cpp

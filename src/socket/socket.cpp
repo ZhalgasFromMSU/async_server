@@ -50,8 +50,8 @@ namespace NAsync {
         return TAcceptAwaitable{*this};
     }
 
-    TConnectAwaitable TSocket::Connect() noexcept {
-        return TConnectAwaitable{*this};
+    TConnectAwaitable TSocket::Connect(const TSockDescr& remoteSock) noexcept {
+        return TConnectAwaitable{*this, remoteSock};
     }
 
 } // namespace NAsync

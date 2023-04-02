@@ -20,7 +20,7 @@ namespace NAsync {
         std::error_code Listen() noexcept;
         TAcceptAwaitable Accept() noexcept;
 
-        TConnectAwaitable Connect() noexcept;
+        TConnectAwaitable Connect(const TSockDescr& remoteSock) noexcept;
 
     private:
         TSockDescr Descr_;

@@ -9,55 +9,54 @@
 
 namespace NAsync {
 
-    // TIpAndPort
-    TIpAndPort::TIpAndPort(EDomain domain, const sockaddr& sockAddr) noexcept {
+    // TAddress
+    TAddress TAddress::FromSockaddr(EDomain domain, const sockaddr& sockAddr) noexcept {
+        TAddress address {.Domain = domain};
         if (domain == EDomain::kUnix) {
-            Ip = static_cast<const sockaddr_un*>((const void*)&sockAddr)->sun_path;
+            address.Ip = static_cast<const sockaddr_un*>((const void*)&sockAddr)->sun_path;
         } else {
             char buffer[std::max(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)];
             int sockDomain;
             const void* src;
             if (domain == EDomain::kIPv4) {
                 auto addr = static_cast<const sockaddr_in*>((const void*)&sockAddr);
-                Port = ntohs(addr->sin_port);
+                address.Port = ntohs(addr->sin_port);
                 src = &addr->sin_addr;
                 sockDomain = AF_INET;
             } else {
                 auto addr = static_cast<const sockaddr_in6*>((const void*)&sockAddr);
-                Port = ntohs(addr->sin6_port);
+                address.Port = ntohs(addr->sin6_port);
                 src = &addr->sin6_addr;
                 sockDomain = AF_INET6;
             }
 
             const char* str = inet_ntop(sockDomain, src, buffer, sizeof(buffer));
             VERIFY_SYSCALL(str != nullptr);
-            Ip = str;
+            address.Ip = str;
         }
+        return address;
     }
-    // ~TIpAndPort
+    // ~TAddress
 
     // TSockDescr
     TSockDescr::TSockDescr(TSockDescr&&) noexcept = default;
     TSockDescr& TSockDescr::operator=(TSockDescr&&) noexcept = default;
     TSockDescr::~TSockDescr() = default;
 
-    TSockDescr::TSockDescr(EDomain domain, ESockType type, TIpAndPort ipAndPort) noexcept
-        : Domain_{domain}
-        , Type_{type}
-        , IpAndPort_{std::move(ipAndPort)}
+    TSockDescr::TSockDescr(EDomain domain, ESockType type, TAddress address) noexcept
+        : Type_{type}
+        , Address_{std::move(address)}
     {}
 
     TSockDescr::TSockDescr(EDomain domain, ESockType type, const sockaddr& sockAddr) noexcept
-        : Domain_{domain}
-        , Type_{type}
-        , IpAndPort_{Domain_, sockAddr}
+        : Type_{type}
+        , Address_{TAddress::FromSockaddr(domain, sockAddr)}
     {}
 
     TSockDescr::TSockDescr(addrinfo info) noexcept
         : AddrInfo_{std::make_unique<addrinfo>(std::move(info))}
-        , Domain_{ToDomain(AddrInfo_->ai_family)}
         , Type_{ToSockType(AddrInfo_->ai_socktype)}
-        , IpAndPort_{Domain_, *AddrInfo_->ai_addr}
+        , Address_{TAddress::FromSockaddr(ToDomain(AddrInfo_->ai_family), *AddrInfo_->ai_addr)}
     {}
 
     TResult<TSocket> TSockDescr::CreateSocket() && noexcept {

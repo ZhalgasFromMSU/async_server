@@ -23,8 +23,26 @@ namespace NAsync {
 
     void TAcceptAwaitable::await_suspend(std::coroutine_handle<> handle) noexcept {
         if (ThreadPool) {
-            Epoll->WatchForRead()
+            Epoll->WatchForRead(Socket_, [this, handle] {
+                VERIFY(ThreadPool->EnqueJob(handle));
+            });
+        } else {
+            Epoll->WatchForRead(Socket_, handle);
         }
+    }
+
+    TResult<TSocket> TAcceptAwaitable::await_resume() noexcept {
+        if (NewSocket_) {
+            return std::move(*NewSocket_);
+        }
+
+        sockaddr addr;
+        socklen_t size;
+        int sockFd = accept4(Socket_.Fd(), &addr, &size, SOCK_NONBLOCK);
+        if (sockFd == -1) {
+            return std::error_code{errno, std::system_category()};
+        }
+        return TSocket{sockFd, TSockDescr{Socket_.Description().Domain(), Socket_.Description().Type(), addr}};
     }
 
 } // namespace NAsync
