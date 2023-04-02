@@ -16,11 +16,11 @@ namespace NAsync {
 
         bool await_ready() noexcept;
         void await_suspend(std::coroutine_handle<> handle) noexcept;
-        std::error_code await_resume() noexcept;
+        TResult<TSocket> await_resume() noexcept;
 
     private:
         const TSocket& Socket_;
-        std::optional<std::error_code> NewSocket_;
+        std::optional<TResult<TSocket>> NewSocket_;
     };
 
 } // namespace NAsync

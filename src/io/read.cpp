@@ -30,7 +30,7 @@ namespace NAsync {
 
     void TReadAwaitable::await_suspend(std::coroutine_handle<> handle) const noexcept {
         if (ThreadPool) {
-            Epoll->WatchForRead(IoObject_, [&] {
+            Epoll->WatchForRead(IoObject_, [this, handle] {
                 VERIFY(ThreadPool->EnqueJob(handle));
             });
         } else {

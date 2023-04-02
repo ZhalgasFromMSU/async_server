@@ -10,8 +10,7 @@ namespace NAsync {
 
     class TSocket: public TIoObject {
     public:
-        explicit TSocket(TSockDescr descr) noexcept;
-        ~TSocket();
+        TSocket(int fd, TSockDescr descr) noexcept;
 
         inline const TSockDescr& Description() const noexcept {
             return Descr_;
@@ -25,7 +24,6 @@ namespace NAsync {
 
     private:
         TSockDescr Descr_;
-        int Fd_;
     };
 
 } // namespace NAsync

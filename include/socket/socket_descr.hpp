@@ -1,8 +1,11 @@
 #pragma once
 
+#include <util/result.hpp>
+
 #include <memory>
 
 struct addrinfo;
+struct sockaddr;
 
 namespace NAsync {
 
@@ -18,6 +21,13 @@ namespace NAsync {
         kRaw,
     };
 
+    struct TIpAndPort {
+        TIpAndPort(EDomain domain, const sockaddr& sockAddr) noexcept;
+
+        std::string Ip;
+        uint16_t Port = 0;
+    };
+
     class TSocket;
 
     class TSockDescr {
@@ -25,6 +35,9 @@ namespace NAsync {
         TSockDescr(TSockDescr&&) noexcept;
         TSockDescr& operator=(TSockDescr&&) noexcept;
         ~TSockDescr();
+
+        TSockDescr(EDomain domain, ESockType type, TIpAndPort ipAndPort) noexcept;
+        TSockDescr(EDomain domain, ESockType type, const sockaddr& sockAddr) noexcept;
 
         inline EDomain Domain() const noexcept {
             return Domain_;
@@ -34,27 +47,26 @@ namespace NAsync {
             return Type_;
         }
 
-        inline uint16_t Port() const noexcept {
-            return Port_;
-        }
-
         const std::string& StrAddr() const noexcept {
-            return StrAddr_;
+            return IpAndPort_.Ip;
         }
 
-        TSocket CreateSocket() && noexcept;
+        inline uint16_t Port() const noexcept {
+            return IpAndPort_.Port;
+        }
+
+        TResult<TSocket> CreateSocket() && noexcept;
 
     private:
-        TSockDescr(addrinfo addrinfo) noexcept;
-
         friend TSocket;
         friend class TResolver;
+
+        TSockDescr(addrinfo addrinfo) noexcept;
 
         std::unique_ptr<addrinfo> AddrInfo_;
         EDomain Domain_;
         ESockType Type_;
-        std::string StrAddr_;
-        uint16_t Port_ = 0;
+        TIpAndPort IpAndPort_;
     };
 
     // Helper functions

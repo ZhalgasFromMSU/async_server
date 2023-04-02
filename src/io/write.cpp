@@ -30,7 +30,7 @@ namespace NAsync {
 
     void TWriteAwaitable::await_suspend(std::coroutine_handle<> handle) const noexcept {
         if (ThreadPool) {
-            Epoll->WatchForWrite(IoObject_, [&] {
+            Epoll->WatchForWrite(IoObject_, [this, handle] {
                 VERIFY(ThreadPool->EnqueJob(handle));
             });
         } else {

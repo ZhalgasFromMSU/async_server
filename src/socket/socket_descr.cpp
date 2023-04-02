@@ -9,42 +9,63 @@
 
 namespace NAsync {
 
+    // TIpAndPort
+    TIpAndPort::TIpAndPort(EDomain domain, const sockaddr& sockAddr) noexcept {
+        if (domain == EDomain::kUnix) {
+            Ip = static_cast<const sockaddr_un*>((const void*)&sockAddr)->sun_path;
+        } else {
+            char buffer[std::max(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)];
+            int sockDomain;
+            const void* src;
+            if (domain == EDomain::kIPv4) {
+                auto addr = static_cast<const sockaddr_in*>((const void*)&sockAddr);
+                Port = ntohs(addr->sin_port);
+                src = &addr->sin_addr;
+                sockDomain = AF_INET;
+            } else {
+                auto addr = static_cast<const sockaddr_in6*>((const void*)&sockAddr);
+                Port = ntohs(addr->sin6_port);
+                src = &addr->sin6_addr;
+                sockDomain = AF_INET6;
+            }
+
+            const char* str = inet_ntop(sockDomain, src, buffer, sizeof(buffer));
+            VERIFY_SYSCALL(str != nullptr);
+            Ip = str;
+        }
+    }
+    // ~TIpAndPort
+
     // TSockDescr
     TSockDescr::TSockDescr(TSockDescr&&) noexcept = default;
     TSockDescr& TSockDescr::operator=(TSockDescr&&) noexcept = default;
     TSockDescr::~TSockDescr() = default;
 
+    TSockDescr::TSockDescr(EDomain domain, ESockType type, TIpAndPort ipAndPort) noexcept
+        : Domain_{domain}
+        , Type_{type}
+        , IpAndPort_{std::move(ipAndPort)}
+    {}
+
+    TSockDescr::TSockDescr(EDomain domain, ESockType type, const sockaddr& sockAddr) noexcept
+        : Domain_{domain}
+        , Type_{type}
+        , IpAndPort_{Domain_, sockAddr}
+    {}
+
     TSockDescr::TSockDescr(addrinfo info) noexcept
         : AddrInfo_{std::make_unique<addrinfo>(std::move(info))}
         , Domain_{ToDomain(AddrInfo_->ai_family)}
         , Type_{ToSockType(AddrInfo_->ai_socktype)}
-    {
-        if (Domain_ == EDomain::kUnix) {
-            StrAddr_ = static_cast<sockaddr_un*>((void*)AddrInfo_->ai_addr)->sun_path;
-        } else {
-            char buffer[std::max(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)];
-            int domain;
-            const void* src;
-            if (Domain_ == EDomain::kIPv4) {
-                sockaddr_in* addr = static_cast<sockaddr_in*>((void*)AddrInfo_->ai_addr);
-                Port_ = ntohs(addr->sin_port);
-                src = &addr->sin_addr;
-                domain = AF_INET;
-            } else {
-                sockaddr_in6* addr = static_cast<sockaddr_in6*>((void*)AddrInfo_->ai_addr);
-                Port_ = ntohs(addr->sin6_port);
-                src = &addr->sin6_addr;
-                domain = AF_INET6;
-            }
+        , IpAndPort_{Domain_, *AddrInfo_->ai_addr}
+    {}
 
-            const char* str = inet_ntop(domain, src, buffer, sizeof(buffer));
-            VERIFY_SYSCALL(str != nullptr);
-            StrAddr_ = str;
+    TResult<TSocket> TSockDescr::CreateSocket() && noexcept {
+        int sockFd = socket(AddrInfo_->ai_family, AddrInfo_->ai_socktype | SOCK_NONBLOCK, AddrInfo_->ai_protocol);
+        if (sockFd == -1) {
+            return std::error_code{errno, std::system_category()};
         }
-    }
-
-    TSocket TSockDescr::CreateSocket() && noexcept {
-        return TSocket{std::move(*this)};
+        return TSocket{sockFd, std::move(*this)};
     }
     // ~TSockDescr
 

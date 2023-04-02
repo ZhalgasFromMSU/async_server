@@ -45,7 +45,7 @@ namespace NAsync {
         }
 
         if (node == nullptr) {
-            hints.ai_flags = AI_PASSIVE;
+            hints.ai_flags = AI_PASSIVE; // use any address instead of loopback
         }
 
         int status = getaddrinfo(node, service, &hints, &lookupResult);

@@ -9,16 +9,10 @@
 
 namespace NAsync {
 
-    TSocket::TSocket(TSockDescr descr) noexcept
-        : TIoObject{socket(FromDomain(Descr_.Domain()), FromSockType(Descr_.Type()) | SOCK_NONBLOCK, 0)}
+    TSocket::TSocket(int fd, TSockDescr descr) noexcept
+        : TIoObject{fd}
         , Descr_{std::move(descr)}
     {}
-
-    TSocket::~TSocket() {
-        if (Fd_ > 0) {
-            close(Fd_);
-        }
-    }
 
     std::error_code TSocket::Bind() noexcept {
         sockaddr* addr = static_cast<sockaddr*>((void*)Descr_.AddrInfo_.get());
