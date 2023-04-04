@@ -65,6 +65,7 @@ add_executable(${TESTS_GROUP}
     tests/test_coro.cpp
     tests/test_net.cpp
     tests/test_socket.cpp
+    tests/test_resolve.cpp
 )
 
 target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME})

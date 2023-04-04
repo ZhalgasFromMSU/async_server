@@ -37,6 +37,7 @@ namespace NAsync {
         TSockDescr& operator=(TSockDescr&&) noexcept;
         ~TSockDescr();
 
+        TSockDescr(EDomain domain, ESockType type) noexcept;
         TSockDescr(EDomain domain, ESockType type, TAddress address) noexcept;
         TSockDescr(EDomain domain, ESockType type, const sockaddr& sockAddr) noexcept;
 

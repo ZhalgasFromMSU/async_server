@@ -43,6 +43,11 @@ namespace NAsync {
     TSockDescr& TSockDescr::operator=(TSockDescr&&) noexcept = default;
     TSockDescr::~TSockDescr() = default;
 
+    TSockDescr::TSockDescr(EDomain domain, ESockType type) noexcept
+        : Type_{type}
+        , Address_{ .Domain = domain }
+    {}
+
     TSockDescr::TSockDescr(EDomain domain, ESockType type, TAddress address) noexcept
         : Type_{type}
         , Address_{std::move(address)}
@@ -60,7 +65,12 @@ namespace NAsync {
     {}
 
     TResult<TSocket> TSockDescr::CreateSocket() && noexcept {
-        int sockFd = socket(AddrInfo_->ai_family, AddrInfo_->ai_socktype | SOCK_NONBLOCK, AddrInfo_->ai_protocol);
+        int sockFd;
+        if (AddrInfo_) {
+            sockFd = socket(AddrInfo_->ai_family, AddrInfo_->ai_socktype | SOCK_NONBLOCK, AddrInfo_->ai_protocol);
+        } else {
+            sockFd = socket(FromDomain(Address_.Domain), FromSockType(Type_) | SOCK_NONBLOCK, 0);
+        }
         if (sockFd == -1) {
             return std::error_code{errno, std::system_category()};
         }

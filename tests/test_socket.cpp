@@ -1,33 +1,63 @@
+#include <socket/socket.hpp>
 #include <socket/resolve.hpp>
+#include <socket/accept.hpp>
+#include <socket/connect.hpp>
+#include <coro/coroutine.hpp>
+#include <io/read.hpp>
+#include <io/write.hpp>
 
 #include <gtest/gtest.h>
 
 using namespace NAsync;
 
-void CheckSocket(const TSockDescr& descr, const std::string& ipStr, uint16_t port, EDomain domain, ESockType type) {
-    ASSERT_EQ(descr.Domain(), domain);
-    ASSERT_EQ(descr.Port(), port);
-    ASSERT_EQ(descr.Type(), type);
-    ASSERT_EQ(descr.StrAddr(), ipStr);
-}
+TEST(Socket, AcceptConnect) {
+    auto descrs = TResolver::ResolveSync("::1", "9999", EDomain::kIPv6, ESockType::kTcp);
+    ASSERT_TRUE(descrs) << descrs.Error().message();
 
-TEST(Resolve, Localhost) {
-    auto ret = TResolver::ResolveSync("localhost", "1234", EDomain::kIPv4, ESockType::kTcp);
-    ASSERT_TRUE(ret) << ret.Error().message();
-    ASSERT_EQ(ret->size(), 1);
-    CheckSocket(ret->at(0), "127.0.0.1", 1234, EDomain::kIPv4, ESockType::kTcp);
-}
+    TResult<TSocket> socket = std::move(descrs->at(0)).CreateSocket();
+    VERIFY_RESULT(socket);
 
-TEST(Resolve, AnyAddr) {
-    {
-        auto ret = TResolver::ResolveSync(nullptr, "1234", EDomain::kIPv6, ESockType::kUdp);
-        ASSERT_TRUE(ret) << ret.Error().message();
-        CheckSocket(ret->at(0), "::", 1234, EDomain::kIPv6, ESockType::kUdp);
-    }
+    VERIFY_EC(socket->Bind());
+    VERIFY_EC(socket->Listen());
 
-    {
-        auto ret = TResolver::ResolveSync(nullptr, "1234", EDomain::kIPv4, ESockType::kUdp);
-        ASSERT_TRUE(ret) << ret.Error().message();
-        CheckSocket(ret->at(0), "0.0.0.0", 1234, EDomain::kIPv4, ESockType::kUdp);
-    }
+    bool stopped = false;
+    auto server = [&stopped, &socket]() -> TCoroFuture<void> {
+        while (!stopped) {
+            TResult<TSocket> newSock = co_await socket->Accept();
+            VERIFY_RESULT(newSock);
+
+            char buffer[10];
+            TResult<int> readRes = co_await TReadAwaitable(*newSock, buffer, sizeof(buffer));
+            VERIFY_RESULT(readRes);
+            buffer[*readRes] = 0;
+            std::cerr << buffer << std::endl;
+        }
+    };
+
+    TSockDescr descr {EDomain::kIPv6, ESockType::kTcp};
+    TResult<TSocket> writeSocket = std::move(descr).CreateSocket();
+    VERIFY_RESULT(writeSocket);
+
+    auto client = [&stopped, &writeSocket, &descrs]() -> TCoroFuture<void> {
+        stopped = true;
+        VERIFY_EC(co_await writeSocket->Connect(descrs->at(0)));
+        TResult<int> writeRes = co_await TWriteAwaitable(*writeSocket, "123", 3);
+        VERIFY_RESULT(writeRes);
+    };
+
+    TEpoll epoll;
+    TThreadPool threadPool {2};
+    threadPool.Start();
+    auto serverTask = server();
+    serverTask.SetEpoll(&epoll);
+    serverTask.SetThreadPool(&threadPool);
+    auto fut1 = serverTask.Run();
+
+    auto clientTask = client();
+    clientTask.SetEpoll(&epoll);
+    clientTask.SetThreadPool(&threadPool);
+    auto fut2 = clientTask.Run();
+
+    fut1.wait_for(std::chrono::seconds(1));
+    fut2.wait_for(std::chrono::seconds(1));
 }
