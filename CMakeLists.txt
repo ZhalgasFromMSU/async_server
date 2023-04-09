@@ -15,6 +15,8 @@ PUBLIC
     src/io/read.cpp
     src/io/write.cpp
     src/io/well_known_structs.cpp
+    src/net/address_v4.cpp
+    src/net/address_v6.cpp
     src/socket/accept.cpp
     src/socket/connect.cpp
     src/socket/resolve.cpp
@@ -66,6 +68,7 @@ add_executable(${TESTS_GROUP}
     tests/test_net.cpp
     tests/test_socket.cpp
     tests/test_resolve.cpp
+    tests/test_address.cpp
 )
 
 target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME})

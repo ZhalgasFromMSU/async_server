@@ -1,16 +1,10 @@
 #include <iostream>
-
-
-struct A {
-
-};
-
-struct B: A {
-
-};
+#include "tmp.hpp"
+#include "tmp2.hpp"
 
 
 int main() {
-    std::cerr << sizeof(A) << '\t' << sizeof(B) << std::endl;
+    TFakeStruct a;
+    std::cerr << Foo(a).a << std::endl;
     return 0;
 }
