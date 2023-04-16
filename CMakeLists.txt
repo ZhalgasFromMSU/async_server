@@ -16,11 +16,12 @@ PUBLIC
     src/io/well_known_structs.cpp
     src/net/address/ip.cpp
     src/net/socket.cpp
-    src/socket/accept.cpp
-    src/socket/connect.cpp
-    src/socket/resolve.cpp
-    src/socket/socket.cpp
-    src/socket/socket_descr.cpp
+    src/net/accept_connect_awaitable.cpp
+    # src/socket/accept.cpp
+    # src/socket/connect.cpp
+    # src/socket/resolve.cpp
+    # src/socket/socket.cpp
+    # src/socket/socket_descr.cpp
     src/util/result.cpp
 )
 
@@ -66,7 +67,7 @@ add_executable(${TESTS_GROUP}
     tests/test_coro.cpp
     tests/test_net.cpp
     tests/test_socket.cpp
-    tests/test_resolve.cpp
+    # tests/test_resolve.cpp
     tests/test_address.cpp
 )
 

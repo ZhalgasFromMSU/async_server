@@ -1,10 +1,10 @@
-#include <socket/socket.hpp>
-#include <socket/resolve.hpp>
-#include <socket/accept.hpp>
-#include <socket/connect.hpp>
+#include <net/socket.hpp>
+#include <net/accept_connect_awiatable.hpp>
 #include <coro/coroutine.hpp>
 
 #include <gtest/gtest.h>
+
+#include <sys/socket.h>
 
 using namespace NAsync;
 
@@ -58,4 +58,42 @@ TEST(Socket, AcceptConnect) {
 
     // fut1.wait_for(std::chrono::seconds(1));
     // fut2.wait_for(std::chrono::seconds(1));
+}
+
+TEST(Socket, CreateSocket) {
+    auto res = TSocket::CreateListeningSocket(NAsync::TSocket::EType::kTcp, std::make_pair(TIPv6Address::Localhost(), 1234));
+
+    ASSERT_TRUE(res) << res.Error().message();
+
+    int val;
+    socklen_t size = sizeof(val);
+    VERIFY_SYSCALL(getsockopt(res->Fd(), SOL_SOCKET, SO_ACCEPTCONN, &val, &size) == 0);
+    ASSERT_EQ(val, 1);
+}
+
+TEST(Socket, Accept) {
+    auto sock = TSocket::CreateListeningSocket(NAsync::TSocket::EType::kTcp, std::make_pair(TIPv6Address::Localhost(), 1234));
+    ASSERT_TRUE(sock) << sock.Error().message();
+
+    auto coro = [](const TSocket& sock) -> TCoroFuture<TSocket> {
+        auto res = co_await sock.Accept();
+        VERIFY_RESULT(res);
+        co_return std::move(*res);
+    };
+
+    TEpoll epoll;
+
+    auto task = coro(*sock);
+    task.SetEpoll(&epoll);
+    auto future = task.Run();
+    auto socket = future.get();
+}
+
+TEST(Socket, Connect) {
+    auto sock = TSocket::CreateListeningSocket(NAsync::TSocket::EType::kTcp, std::make_pair(TIPv6Address::Localhost(), 1234));
+    ASSERT_TRUE(sock) << sock.Error().message();
+
+    TSocket::TAddr remoteSock = std::make_pair(TIPv6Address::Localhost(), 1235);
+    auto res = sock->Connect(remoteSock).await_resume();
+    std::cerr << res.message() << std::endl;
 }

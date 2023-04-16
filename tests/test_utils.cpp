@@ -48,7 +48,7 @@ TEST(Result, BasicAssertions) {
     }
 }
 
-TEST(Result, NonCopyable) {
+TEST(Result, Movable) {
     struct TSomeStruct {
         TSomeStruct()
             : Val{3}
@@ -68,6 +68,24 @@ TEST(Result, NonCopyable) {
     TSomeStruct inner{std::move(*res)};
     ASSERT_EQ(inner.Val, 3);
 }
+
+TEST(Result, NonCopyable) {
+    struct TNonCopy {
+        TNonCopy(int x) : X{x} {}
+        TNonCopy(TNonCopy&) = delete;
+        TNonCopy& operator=(const TNonCopy&) = delete;
+
+        int X;
+    };
+
+    auto foo = []() -> TResult<TNonCopy> {
+        return TResult<TNonCopy>::Build(10);
+    };
+
+    auto res = foo();
+    ASSERT_EQ(res->X, 10);
+}
+
 
 TEST(Errors, Verify) {
     VERIFY(1 < 2);
