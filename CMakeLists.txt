@@ -12,11 +12,10 @@ PUBLIC
     src/thread/pool.cpp
     src/polling/epoll.cpp
     src/io/io_object.cpp
-    src/io/read.cpp
-    src/io/write.cpp
+    src/io/read_write_awaitable.cpp
     src/io/well_known_structs.cpp
-    src/net/address_v4.cpp
-    src/net/address_v6.cpp
+    src/net/address/ip.cpp
+    src/net/socket.cpp
     src/socket/accept.cpp
     src/socket/connect.cpp
     src/socket/resolve.cpp

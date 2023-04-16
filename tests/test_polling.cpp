@@ -1,8 +1,7 @@
 #include <thread/wait_group.hpp>
 #include <polling/epoll.hpp>
 #include <io/well_known_structs.hpp>
-#include <io/read.hpp>
-#include <io/write.hpp>
+#include <io/read_write_awaitable.hpp>
 
 #include <gtest/gtest.h>
 
@@ -52,18 +51,18 @@ TEST_F(Epoll, AddingOneFd) {
     char output[size];
     memset(output, 0, size);
 
-    auto readResult = Read(pipe.ReadEnd(), output, size);
+    auto readResult = pipe.ReadEnd().Read(output, size).await_resume();
     // check that can't read right now
     ASSERT_EQ(readResult.Error(), std::error_code(EAGAIN, std::system_category()));
 
     TWaitGroup wg;
     wg.Add(1);
     VERIFY_EC(epoll.WatchForRead(pipe.ReadEnd(), [&] {
-        ASSERT_EQ(*Read(pipe.ReadEnd(), output, size), size);
+        ASSERT_EQ(*pipe.ReadEnd().Read(output, size).await_resume(), size);
         wg.Done();
     }));
     ASSERT_EQ(strncmp(output, "\0\0\0\0", size), 0);
-    ASSERT_EQ(*Write(pipe.WriteEnd(), input, size), size);
+    ASSERT_EQ(*pipe.WriteEnd().Write(input, size).await_resume(), size);
     wg.WaitFor(std::chrono::milliseconds(100));
     ASSERT_EQ(strcmp(input, output), 0);
 }

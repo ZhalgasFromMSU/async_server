@@ -1,6 +1,6 @@
 #include <io/well_known_structs.hpp>
-#include <io/write.hpp>
-#include <io/read.hpp>
+#include <io/read_write_awaitable.hpp>
+#include <util/result.hpp>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -49,13 +49,13 @@ namespace NAsync {
     void TEventFd::Set() noexcept {
         constexpr uint64_t numToWrite = 1;
         IsSet_ = true;
-        VERIFY_RESULT(Write(*this, &numToWrite, sizeof(numToWrite))); // write to eventfd always returns 8 bytes, so no need to check retval
+        VERIFY_RESULT(Write(&numToWrite, sizeof(numToWrite)).await_resume()); // write to eventfd always returns 8 bytes, so no need to check retval
     }
 
     void TEventFd::Reset() noexcept {
         uint64_t numToRead;
         IsSet_ = false;
-        VERIFY_RESULT(Read(*this, &numToRead, sizeof(numToRead))); // read from eventfd always returns 8 bytes
+        VERIFY_RESULT(Read(&numToRead, sizeof(numToRead)).await_resume()); // read from eventfd always returns 8 bytes
     }
 
 } // namespace NAsync

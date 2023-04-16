@@ -1,5 +1,5 @@
 #include <io/io_object.hpp>
-#include <util/result.hpp>
+#include <io/read_write_awaitable.hpp>
 
 #include <unistd.h>
 
@@ -28,6 +28,14 @@ namespace NAsync {
 
     int TIoObject::Fd() const noexcept {
         return Fd_;
+    }
+
+    TReadAwaitable TIoObject::Read(void* buf, int num, int flags) const noexcept {
+        return TReadAwaitable{*this, buf, num, flags};
+    }
+
+    TWriteAwaitable TIoObject::Write(const void* buf, int num, int flags) const noexcept {
+        return TWriteAwaitable{*this, buf, num, flags};
     }
 
 } // namespace NAsync

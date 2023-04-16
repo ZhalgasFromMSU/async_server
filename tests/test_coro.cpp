@@ -1,8 +1,7 @@
 #include <coro/coroutine.hpp>
 #include <thread/wait_group.hpp>
 #include <io/well_known_structs.hpp>
-#include <io/read.hpp>
-#include <io/write.hpp>
+#include <io/read_write_awaitable.hpp>
 #include <util/result.hpp>
 
 #include <gtest/gtest.h>
@@ -57,7 +56,7 @@ TEST_F(Coro, Coro) {
     ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
     ASSERT_FALSE(IsReady(future));
 
-    ASSERT_EQ(*Write(pipe.WriteEnd(), "1", 1), 1);
+    ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
     ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
     ASSERT_TRUE(IsReady(future));
     ASSERT_EQ(future.get(), 1);
@@ -86,7 +85,7 @@ TEST_F(Coro, VoidCoro) {
     ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
     ASSERT_FALSE(IsReady(future));
 
-    ASSERT_EQ(*Write(pipe.WriteEnd(), "1", 1), 1);
+    ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
     ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
     ASSERT_TRUE(IsReady(future));
     ASSERT_EQ(sharedNumRead, 1);
@@ -116,7 +115,7 @@ TEST_F(Coro, NestedCoro) {
     ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
     ASSERT_FALSE(IsReady(future));
 
-    ASSERT_EQ(*Write(pipe.WriteEnd(), "1", 1), 1);
+    ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
     ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
     ASSERT_TRUE(IsReady(future));
     ASSERT_EQ(future.get(), 1);
@@ -153,7 +152,7 @@ TEST_F(Coro, WithoutThreadPool) {
 
     auto future = task.Run();
     ASSERT_FALSE(IsReady(future));
-    ASSERT_EQ(*Write(pipe.WriteEnd(), "1", 1), 1);
+    ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
     wg.WaitFor(std::chrono::seconds(1));
     ASSERT_TRUE(IsReady(future));
     ASSERT_EQ(future.get(), 1);

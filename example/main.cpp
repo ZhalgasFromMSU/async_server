@@ -1,10 +1,12 @@
 #include <iostream>
-#include "tmp.hpp"
-#include "tmp2.hpp"
+#include <functional>
 
+int foo(int x, int y) {
+    return x + y;
+}
 
 int main() {
-    TFakeStruct a;
-    std::cerr << Foo(a).a << std::endl;
+    auto f = std::bind(foo, 1, 2);
+    std::cerr << f() << std::endl;
     return 0;
 }

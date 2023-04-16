@@ -8,8 +8,6 @@
 
 namespace NAsync {
 
-    TResult<int> Write(const TIoObject& ioObject, const void* buf, int num, int flags = 0) noexcept;
-
     class TWriteAwaitable: public TWithEpoll {
     public:
         inline TWriteAwaitable(const TIoObject& ioObject, const void* buf, int num, int flags = 0) noexcept
