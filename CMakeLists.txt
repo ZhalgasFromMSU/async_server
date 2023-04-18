@@ -3,6 +3,7 @@ project(Async)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 add_library(${PROJECT_NAME})
 
