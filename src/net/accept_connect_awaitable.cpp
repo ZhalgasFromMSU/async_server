@@ -3,6 +3,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <cstring>
+#include <variant>
 
 namespace NAsync {
 
@@ -19,28 +20,28 @@ namespace NAsync {
             }
         }
 
-        int Connect(int sockFd, const TSocket::TAddr& addr) {
-            int status;
-            if (auto addrv4 = std::get_if<std::pair<TIPv4Address, uint16_t>>(&addr)) {
-                sockaddr_in addrIn;
-                memset(&addrIn, 0, sizeof(addrIn));
-                addrIn.sin_addr = addrv4->first.Raw();
-                addrIn.sin_family = AF_INET;
-                addrIn.sin_port = addrv4->second;
-                status = connect(sockFd, static_cast<const sockaddr*>((const void*)&addrIn), sizeof(addrIn));
-            } else if (auto addrv6 = std::get_if<std::pair<TIPv6Address, uint16_t>>(&addr)) {
-                sockaddr_in6 addrIn;
-                memset(&addrIn, 0, sizeof(addrIn));
-                addrIn.sin6_addr = addrv6->first.Raw();
-                addrIn.sin6_family = AF_INET6;
-                addrIn.sin6_port = addrv6->second;
-                status = connect(sockFd, static_cast<const sockaddr*>((const void*)&addrIn), sizeof(addrIn));
-            } else {
-                VERIFY(false);
-            }
+        //int Connect(int sockFd, const TSocket::TAddr& addr) {
+            //int status;
+            //if (auto addrv4 = std::get_if<std::pair<TIPv4Address, uint16_t>>(&addr)) {
+                //sockaddr_in addrIn;
+                //memset(&addrIn, 0, sizeof(addrIn));
+                //addrIn.sin_addr = addrv4->first.Raw();
+                //addrIn.sin_family = AF_INET;
+                //addrIn.sin_port = addrv4->second;
+                //status = connect(sockFd, static_cast<const sockaddr*>((const void*)&addrIn), sizeof(addrIn));
+            //} else if (auto addrv6 = std::get_if<std::pair<TIPv6Address, uint16_t>>(&addr)) {
+                //sockaddr_in6 addrIn;
+                //memset(&addrIn, 0, sizeof(addrIn));
+                //addrIn.sin6_addr = addrv6->first.Raw();
+                //addrIn.sin6_family = AF_INET6;
+                //addrIn.sin6_port = addrv6->second;
+                //status = connect(sockFd, static_cast<const sockaddr*>((const void*)&addrIn), sizeof(addrIn));
+            //} else {
+                //VERIFY(false);
+            //}
 
-            return status;
-        }
+            //return status;
+        //}
     }
 
     // Accept
@@ -85,36 +86,46 @@ namespace NAsync {
 
     // Connect
     bool TConnectAwaitable::await_ready() noexcept {
-        int status = Connect(Socket_.Fd(), RemoteSock_);
-        if (status == -1) {
-            if (errno & (EINPROGRESS | EAGAIN)) {
-                return false;
-            }
-            ConnectError_ = std::error_code{errno, std::system_category()};
-        } else {
-            ConnectError_ = std::error_code{};
+        int domain = AF_INET;
+        if (std::holds_alternative<std::pair<TIPv6Address, uint16_t>>(RemoteAddr_)) {
+            domain = AF_INET6;
         }
+        int sockFd = socket(domain, SOCK_STREAM | SOCK_NONBLOCK, 0);
+        if (sockFd == -1) {
+            Socket_.emplace(std::error_code{errno, std::system_category()});
+            return true;
+        }
+        Socket_.emplace(TSocket{sockFd, TSocket::EType::kTcp, std::move(RemoteAddr_)});
+        //int status = Connect(Socket_.Fd(), RemoteAddr_);
+        //if (status == -1) {
+            //if (errno & (EINPROGRESS | EAGAIN)) {
+                //return false;
+            //}
+            //ConnectError_ = std::error_code{errno, std::system_category()};
+        //} else {
+            //ConnectError_ = std::error_code{};
+        //}
         return true;
     }
 
     void TConnectAwaitable::await_suspend(std::coroutine_handle<> handle) noexcept {
-        if (ThreadPool) {
-            Epoll->WatchForWrite(Socket_, [this, handle] {
-                VERIFY(ThreadPool->EnqueJob(handle));
-            });
-        } else {
-            Epoll->WatchForWrite(Socket_, handle);
-        }
+        //if (ThreadPool) {
+            //Epoll->WatchForWrite(Socket_, [this, handle] {
+                //VERIFY(ThreadPool->EnqueJob(handle));
+            //});
+        //} else {
+            //Epoll->WatchForWrite(Socket_, handle);
+        //}
     }
 
-    std::error_code TConnectAwaitable::await_resume() noexcept {
-        if (ConnectError_) {
-            return std::move(*ConnectError_);
-        }
-        int status = Connect(Socket_.Fd(), RemoteSock_);
-        if (status == -1) {
-            return std::error_code{errno, std::system_category()};
-        }
+    TResult<TSocket> TConnectAwaitable::await_resume() noexcept {
+        //if (ConnectError_) {
+            //return std::move(*ConnectError_);
+        //}
+        //int status = Connect(Socket_.Fd(), RemoteAddr_);
+        //if (status == -1) {
+            //return std::error_code{errno, std::system_category()};
+        //}
         return std::error_code{};
     }
 

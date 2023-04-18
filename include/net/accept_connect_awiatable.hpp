@@ -25,20 +25,18 @@ namespace NAsync {
 
     class TConnectAwaitable: public TWithEpoll {
     public:
-        inline TConnectAwaitable(const TSocket& socket, const TSocket::TAddr& remoteSock) noexcept
-            : Socket_{socket}
-            , RemoteSock_{remoteSock}
+        inline TConnectAwaitable(TSocket::TAddr remoteSock) noexcept
+            : RemoteAddr_{std::move(remoteSock)}
         {}
 
         bool await_ready() noexcept;
         void await_suspend(std::coroutine_handle<> handle) noexcept;
-        std::error_code await_resume() noexcept;
+        TResult<TSocket> await_resume() noexcept;
 
     private:
-        const TSocket& Socket_;
-        const TSocket::TAddr& RemoteSock_;
+        TSocket::TAddr RemoteAddr_;
 
-        std::optional<std::error_code> ConnectError_;
+        std::optional<TResult<TSocket>> Socket_;
     };
 
 } // namespace NAsync

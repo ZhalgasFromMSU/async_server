@@ -60,15 +60,15 @@ namespace NAsync {
             return std::error_code{errno, std::system_category()};
         }
 
-        return TResult<TSocket>::Build(sockFd, type, std::move(address));
+        return TResult<TSocket>{sockFd, type, std::move(address)};
     }
 
     TAcceptAwaitable TSocket::Accept() const noexcept {
         return TAcceptAwaitable{*this};
     }
 
-    TConnectAwaitable TSocket::Connect(const TSocket::TAddr& remoteAddr) const noexcept {
-        return TConnectAwaitable{*this, remoteAddr};
+    TConnectAwaitable TSocket::CreateConnectedSocket(TAddr addr) noexcept {
+        return TConnectAwaitable{std::move(addr)};
     }
 
 } // namespace NAsync

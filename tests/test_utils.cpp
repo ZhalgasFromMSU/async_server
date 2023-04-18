@@ -62,7 +62,7 @@ TEST(Result, Movable) {
         int Val = 4;
     };
 
-    TResult<TSomeStruct> res{std::in_place_type_t<TSomeStruct>{}};
+    TResult<TSomeStruct> res{};
     ASSERT_EQ(res->Val, 3);
 
     TSomeStruct inner{std::move(*res)};
@@ -72,14 +72,14 @@ TEST(Result, Movable) {
 TEST(Result, NonCopyable) {
     struct TNonCopy {
         TNonCopy(int x) : X{x} {}
-        TNonCopy(TNonCopy&) = delete;
+        TNonCopy(const TNonCopy&) = delete;
         TNonCopy& operator=(const TNonCopy&) = delete;
 
         int X;
     };
 
     auto foo = []() -> TResult<TNonCopy> {
-        return TResult<TNonCopy>::Build(10);
+        return TResult<TNonCopy>{10};
     };
 
     auto res = foo();

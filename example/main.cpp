@@ -1,12 +1,22 @@
 #include <iostream>
 #include <functional>
+#include <variant>
+#include "../include/util/result.hpp"
 
-int foo(int x, int y) {
-    return x + y;
+struct TNonCopy {
+    TNonCopy(int x) : X{x} {}
+    TNonCopy(const TNonCopy&) = delete;
+    TNonCopy& operator=(const TNonCopy&) = delete;
+
+    int X;
+};
+
+NAsync::TResult<TNonCopy> foo() {
+    return NAsync::TResult<TNonCopy>{10};
 }
 
+
 int main() {
-    auto f = std::bind(foo, 1, 2);
-    std::cerr << f() << std::endl;
+    auto res = foo();
     return 0;
 }

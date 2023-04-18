@@ -46,14 +46,14 @@ namespace NAsync {
         requires (!std::is_same_v<T, void>)
     class TResult: public std::variant<T, std::error_code> {
     public:
-        using Type = T;
+        TResult(std::error_code ec)
+            : std::variant<T, std::error_code>{std::move(ec)}
+        {}
 
-        using std::variant<T, std::error_code>::variant;
-
-        template<typename ...TArgs>
-        static TResult<T> Build(TArgs&&... args) {
-            return TResult<T>{std::in_place_type<T>, std::forward<TArgs>(args)...};
-        }
+        template<typename... TArgs>
+        TResult(TArgs&&... args)
+            : std::variant<T, std::error_code>{std::in_place_type<T>, std::forward<TArgs>(args)...}
+        {}
 
         operator bool() const {
             return !std::holds_alternative<std::error_code>(*this);

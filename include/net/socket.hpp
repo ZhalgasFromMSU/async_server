@@ -23,6 +23,7 @@ namespace NAsync {
         >;
 
         static TResult<TSocket> CreateListeningSocket(EType type, TAddr addr) noexcept;
+        static TConnectAwaitable CreateConnectedSocket(TAddr addr) noexcept;
 
         TSocket(int fd, EType type, TAddr addr) noexcept;
 
@@ -35,7 +36,6 @@ namespace NAsync {
         }
 
         TAcceptAwaitable Accept() const noexcept;
-        TConnectAwaitable Connect(const TAddr& addr) const noexcept;
 
     private:
         static constexpr int ListenintQueueSize_ = 10;
