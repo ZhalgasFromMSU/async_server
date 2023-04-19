@@ -17,7 +17,8 @@ PUBLIC
     src/io/well_known_structs.cpp
     src/net/address/ip.cpp
     src/net/socket.cpp
-    # src/net/accept_connect_awaitable.cpp
+    src/net/accept.cpp
+    src/net/connect.cpp
     src/util/result.cpp
 )
 
