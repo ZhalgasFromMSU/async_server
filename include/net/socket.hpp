@@ -4,44 +4,56 @@
 #include <io/io_object.hpp>
 
 #include <variant>
+#include <optional>
 
 namespace NAsync {
 
+    // Socket address
+    using TIPv4SocketAddress = std::pair<TIPv4Address, uint16_t>;  // <host, port>
+    using TIPv6SocketAddress = std::pair<TIPv6Address, uint16_t>;  // <host, port>
+    using TSocketAddress = std::variant<TIPv4SocketAddress, TIPv6SocketAddress>;
+
+    // Forward declarations
     class TAcceptAwaitable;
     class TConnectAwaitable;
 
-    class TSocket: public TIoObject {
+    // TListeningSocket
+    class TListeningSocket : public TIoObject {
     public:
-        enum class EType {
-            kUdp,
-            kTcp,
-        };
+        static TResult<TListeningSocket> Create(TSocketAddress address, int queueLen = 10) noexcept;
 
-        using TAddr = std::variant<
-            std::pair<TIPv4Address, uint16_t>, // <host, port>
-            std::pair<TIPv6Address, uint16_t>  // <host, port>
-        >;
-
-        static TResult<TSocket> CreateListeningSocket(EType type, TAddr addr) noexcept;
-        static TConnectAwaitable CreateConnectedSocket(TAddr addr) noexcept;
-
-        TSocket(int fd, EType type, TAddr addr) noexcept;
-
-        inline EType Type() const noexcept {
-            return Type_;
-        }
-
-        inline const TAddr& Addr() const noexcept {
+        inline const TSocketAddress& Address() const noexcept {
             return Address_;
         }
 
         TAcceptAwaitable Accept() const noexcept;
 
     private:
-        static constexpr int ListenintQueueSize_ = 10;
+        TListeningSocket(int sockFd, TSocketAddress address) noexcept
+            : TIoObject{sockFd}
+            , Address_{std::move(address)}
+        {}
 
-        EType Type_;
-        TAddr Address_;
+        TSocketAddress Address_;
+    };
+
+    class TSocket : public TIoObject {
+    public:
+        inline void SetRemoteAddress(TSocketAddress remote) noexcept {
+            Remote_.emplace(std::move(remote));
+        }
+
+        TConnectAwaitable Connect(TSocketAddress dest) noexcept;
+
+    private:
+        friend TAcceptAwaitable;
+
+        TSocket(int sockFd, TSocketAddress remote) noexcept
+            : TIoObject{sockFd}
+            , Remote_{std::move(remote)}
+        {}
+
+        std::optional<TSocketAddress> Remote_; // udp sockets may lack remote address
     };
 
 } // namespace NAsync

@@ -17,12 +17,7 @@ PUBLIC
     src/io/well_known_structs.cpp
     src/net/address/ip.cpp
     src/net/socket.cpp
-    src/net/accept_connect_awaitable.cpp
-    # src/socket/accept.cpp
-    # src/socket/connect.cpp
-    # src/socket/resolve.cpp
-    # src/socket/socket.cpp
-    # src/socket/socket_descr.cpp
+    # src/net/accept_connect_awaitable.cpp
     src/util/result.cpp
 )
 

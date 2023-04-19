@@ -61,7 +61,7 @@ TEST(Socket, AcceptConnect) {
 }
 
 TEST(Socket, CreateSocket) {
-    auto res = TSocket::CreateListeningSocket(NAsync::TSocket::EType::kTcp, std::make_pair(TIPv6Address::Localhost(), 1234));
+    auto res = TListeningSocket::Create(std::make_pair(TIPv6Address::Localhost(), 1234));
 
     ASSERT_TRUE(res) << res.Error().message();
 

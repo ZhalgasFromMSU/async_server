@@ -12,12 +12,18 @@ namespace NAsync {
     }
 
     TIoObject& TIoObject::operator=(TIoObject&& other) noexcept {
-        std::swap(Fd_, other.Fd_);
+        if (Fd_ >= 0) {
+            VERIFY_SYSCALL(close(Fd_) >= 0);
+        }
+        Fd_ = other.Fd_;
+        other.Fd_ = -1;
         return *this;
     }
 
-    TIoObject::TIoObject(TIoObject&& other) noexcept {
-        std::swap(Fd_, other.Fd_);
+    TIoObject::TIoObject(TIoObject&& other) noexcept
+        : Fd_{other.Fd_}
+    {
+        other.Fd_ = -1;
     }
 
     TIoObject::~TIoObject() noexcept {
