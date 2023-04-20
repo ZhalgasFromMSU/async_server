@@ -9,6 +9,7 @@
 namespace NAsync {
 
     // Socket address
+    static constexpr uint16_t kAnyPort = 0;
     using TIPv4SocketAddress = std::pair<TIPv4Address, uint16_t>;  // <host, port>
     using TIPv6SocketAddress = std::pair<TIPv6Address, uint16_t>;  // <host, port>
     using TSocketAddress = std::variant<TIPv4SocketAddress, TIPv6SocketAddress>;
@@ -37,16 +38,17 @@ namespace NAsync {
         TSocketAddress Address_;
     };
 
+    // TSocket
     class TSocket : public TIoObject {
     public:
         template<std::derived_from<IAddress> T>
         static TResult<TSocket> Create(bool streamSocket) noexcept;
 
-        inline void SetRemoteAddress(TSocketAddress remote) noexcept {
-            Remote_.emplace(std::move(remote));
-        }
-
         TConnectAwaitable Connect(TSocketAddress dest) noexcept;
+
+        inline const std::optional<TSocketAddress>& RemoteAddress() const noexcept {
+            return Remote_;
+        }
 
     private:
         friend TAcceptAwaitable;

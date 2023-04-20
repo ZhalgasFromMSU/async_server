@@ -11,7 +11,7 @@
 using namespace NAsync;
 
 TEST(Socket, CreateSocket) {
-    auto res = TListeningSocket::Create(std::make_pair(TIPv6Address::Localhost(), 1234));
+    auto res = TListeningSocket::Create(std::make_pair(TIPv6Address::Localhost(), kAnyPort));
 
     ASSERT_TRUE(res) << res.Error().message();
 
@@ -22,20 +22,24 @@ TEST(Socket, CreateSocket) {
 }
 
 TEST(Socket, AcceptConnect) {
-    auto server = []() -> TCoroFuture<void> {
-        auto acceptor = TListeningSocket::Create(std::make_pair(TIPv6Address::Localhost(), 1234));
+    std::atomic<uint16_t> port = 0;
+    auto server = [&port]() -> TCoroFuture<void> {
+        auto acceptor = TListeningSocket::Create(std::make_pair(TIPv6Address::Localhost(), kAnyPort));
         VERIFY_RESULT(acceptor);
+        port = std::get<TIPv6SocketAddress>(acceptor->Address()).second;
+        port.notify_one();
 
         auto socket = co_await acceptor->Accept();
         VERIFY_RESULT(socket);
         co_return;
     };
 
-    auto client = []() -> TCoroFuture<void> {
+    auto client = [&port]() -> TCoroFuture<void> {
         auto socket = TSocket::Create<TIPv6Address>(true /* streamingSocket */);
         VERIFY_RESULT(socket);
 
-        std::error_code error = co_await socket->Connect(std::make_pair(TIPv6Address::Localhost(), 1234));
+        port.wait(0);
+        std::error_code error = co_await socket->Connect(std::make_pair(TIPv6Address::Localhost(), port.load()));
         VERIFY_EC(error);
         co_return;
     };
@@ -61,8 +65,11 @@ TEST(Socket, AcceptConnect) {
 }
 
 TEST(Socket, PingPong) {
-    auto server = []() -> TCoroFuture<std::string> {
-        TResult<TListeningSocket> acceptor = TListeningSocket::Create(std::make_pair(TIPv6Address::Localhost(), 1235));
+    std::atomic<uint16_t> port = 0;
+    auto server = [&port]() -> TCoroFuture<std::string> {
+        TResult<TListeningSocket> acceptor = TListeningSocket::Create(std::make_pair(TIPv6Address::Localhost(), kAnyPort));
+        port = std::get<TIPv6SocketAddress>(acceptor->Address()).second;
+        port.notify_one();
         TResult<TSocket> socket = co_await acceptor->Accept();
         char buf[sizeof("pingpong")];
         size_t numRead = 0;
@@ -73,9 +80,10 @@ TEST(Socket, PingPong) {
         co_return std::string(buf);
     };
 
-    auto client = []() -> TCoroFuture<void> {
+    auto client = [&port]() -> TCoroFuture<void> {
         TResult<TSocket> socket = TSocket::Create<TIPv6Address>(true /* streamingSocket */);
-        VERIFY_EC(co_await socket->Connect(std::make_pair(TIPv6Address::Localhost(), 1235)));
+        port.wait(0);
+        VERIFY_EC(co_await socket->Connect(std::make_pair(TIPv6Address::Localhost(), port.load())));
 
         char buf[] = "pingpong";
         size_t numWritten = 0;

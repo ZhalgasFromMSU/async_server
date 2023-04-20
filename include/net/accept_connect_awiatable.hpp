@@ -25,9 +25,8 @@ namespace NAsync {
 
     class TConnectAwaitable: public TWithEpoll {
     public:
-        explicit TConnectAwaitable(TSocket& socket, TSocketAddress dest) noexcept
+        explicit TConnectAwaitable(const TSocket& socket) noexcept
             : Socket_{socket}
-            , Dest_{std::move(dest)}
         {}
 
         bool await_ready() noexcept;
@@ -35,8 +34,7 @@ namespace NAsync {
         std::error_code await_resume() noexcept;
 
     private:
-        TSocket& Socket_;
-        TSocketAddress Dest_;
+        const TSocket& Socket_;
 
         std::optional<std::error_code> Error_;
     };

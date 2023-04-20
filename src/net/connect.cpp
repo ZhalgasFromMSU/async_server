@@ -3,28 +3,10 @@
 
 namespace NAsync {
 
-    namespace {
-        int Connect(int sockFd, const TSocketAddress& dest) {
-            int status;
-            if (std::holds_alternative<TIPv4SocketAddress>(dest)) {
-                sockaddr_in raw;
-                NPrivate::ConvertSockaddr(dest, &raw);
-                status = connect(sockFd, NPrivate::PtrCast<sockaddr>(&raw), sizeof(raw));
-            } else if (std::holds_alternative<TIPv6SocketAddress>(dest)) {
-                sockaddr_in6 raw;
-                NPrivate::ConvertSockaddr(dest, &raw);
-                status = connect(sockFd, NPrivate::PtrCast<sockaddr>(&raw), sizeof(raw));
-            } else {
-                VERIFY(false);
-            }
-
-            return status;
-        }
-    }
-
     // TConnectAwaitable
     bool TConnectAwaitable::await_ready() noexcept {
-        int status = Connect(Socket_.Fd(), Dest_);
+        NPrivate::TConverter converter{*Socket_.RemoteAddress()};
+        int status = connect(Socket_.Fd(), converter.Raw(), converter.Size());
         if (status == -1) {
             if (errno & (EINPROGRESS | EAGAIN)) {
                 return false;
@@ -45,6 +27,7 @@ namespace NAsync {
             Epoll->WatchForWrite(Socket_, handle);
         }
     }
+
     std::error_code TConnectAwaitable::await_resume() noexcept {
         if (Error_) {
             return std::move(*Error_);
@@ -60,7 +43,6 @@ namespace NAsync {
             return std::error_code{error, std::system_category()};
         }
 
-        Socket_.SetRemoteAddress(std::move(Dest_));
         return std::error_code{};
     }
 
