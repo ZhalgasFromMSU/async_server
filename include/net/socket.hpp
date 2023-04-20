@@ -39,6 +39,9 @@ namespace NAsync {
 
     class TSocket : public TIoObject {
     public:
+        template<std::derived_from<IAddress> T>
+        static TResult<TSocket> Create(bool streamSocket) noexcept;
+
         inline void SetRemoteAddress(TSocketAddress remote) noexcept {
             Remote_.emplace(std::move(remote));
         }
@@ -47,6 +50,10 @@ namespace NAsync {
 
     private:
         friend TAcceptAwaitable;
+
+        TSocket(int sockFd) noexcept
+            : TIoObject{sockFd}
+        {}
 
         TSocket(int sockFd, TSocketAddress remote) noexcept
             : TIoObject{sockFd}

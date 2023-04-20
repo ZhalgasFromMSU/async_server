@@ -7,7 +7,7 @@ namespace NAsync {
 
         TSocketAddress ToSocketAddress(const sockaddr& raw) {
             if (raw.sa_family == AF_INET) {
-                const auto* rawV4 = NPrivate::ConstPtrCast<sockaddr_in>(&raw);
+                const auto* rawV4 = NPrivate::PtrCast<sockaddr_in>(&raw);
                 return TSocketAddress{
                     std::in_place_type<TIPv4SocketAddress>,
                     std::piecewise_construct,
@@ -15,7 +15,7 @@ namespace NAsync {
                     std::forward_as_tuple(rawV4->sin_port)
                 };
             } else if (raw.sa_family == AF_INET6) {
-                const auto* rawV6 = NPrivate::ConstPtrCast<sockaddr_in6>(&raw);
+                const auto* rawV6 = NPrivate::PtrCast<sockaddr_in6>(&raw);
                 return TSocketAddress{
                     std::in_place_type<TIPv6SocketAddress>,
                     std::piecewise_construct,
@@ -31,16 +31,17 @@ namespace NAsync {
 
     // TAcceptAwaitable
     bool TAcceptAwaitable::await_ready() noexcept {
-        sockaddr raw;
-        socklen_t size;
-        int sockFd = accept4(Acceptor_.Fd(), &raw, &size, SOCK_NONBLOCK);
+        uint8_t raw[std::max(sizeof(sockaddr_in), sizeof(sockaddr_in6))];
+        socklen_t size = sizeof(raw);
+        int sockFd = accept4(Acceptor_.Fd(), NPrivate::PtrCast<sockaddr>(&raw), &size, SOCK_NONBLOCK);
         if (sockFd == -1) {
             if (errno & (EAGAIN | EWOULDBLOCK)) {
                 return false;
             }
             Socket_.emplace(std::error_code{errno, std::system_category()});
         } else {
-            Socket_.emplace(TSocket{sockFd, ToSocketAddress(raw)});
+            VERIFY(size <= sizeof(raw));
+            Socket_.emplace(TSocket{sockFd, ToSocketAddress(*NPrivate::PtrCast<sockaddr>(&raw))});
         }
         return true;
     }
@@ -61,7 +62,8 @@ namespace NAsync {
         }
 
         sockaddr raw;
-        socklen_t size;
+        memset(&raw, 0, sizeof(raw));
+        socklen_t size = 0;
         int sockFd = accept4(Acceptor_.Fd(), &raw, &size, SOCK_NONBLOCK);
         if (sockFd == -1) {
             return std::error_code{errno, std::system_category()};

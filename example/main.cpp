@@ -1,9 +1,9 @@
 #include <iostream>
-#include "tmp.hpp"
+#include "a.hpp"
 
 
 int main() {
     A a;
-    a.foo<int>();
+    a.Foo<int>(1);
     return 0;
 }

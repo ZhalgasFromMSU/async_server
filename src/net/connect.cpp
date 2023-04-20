@@ -9,11 +9,11 @@ namespace NAsync {
             if (std::holds_alternative<TIPv4SocketAddress>(dest)) {
                 sockaddr_in raw;
                 NPrivate::ConvertSockaddr(dest, &raw);
-                status = connect(sockFd, NPrivate::ConstPtrCast<sockaddr>(&raw), sizeof(raw));
+                status = connect(sockFd, NPrivate::PtrCast<sockaddr>(&raw), sizeof(raw));
             } else if (std::holds_alternative<TIPv6SocketAddress>(dest)) {
                 sockaddr_in6 raw;
                 NPrivate::ConvertSockaddr(dest, &raw);
-                status = connect(sockFd, NPrivate::ConstPtrCast<sockaddr>(&raw), sizeof(raw));
+                status = connect(sockFd, NPrivate::PtrCast<sockaddr>(&raw), sizeof(raw));
             } else {
                 VERIFY(false);
             }
@@ -49,10 +49,17 @@ namespace NAsync {
         if (Error_) {
             return std::move(*Error_);
         }
-        int status = Connect(Socket_.Fd(), Dest_);
+        int error;
+        socklen_t size = sizeof(error);
+        int status = getsockopt(Socket_.Fd(), SOL_SOCKET, SO_ERROR, &error, &size);
         if (status == -1) {
             return std::error_code{errno, std::system_category()};
         }
+
+        if (error != 0) {
+            return std::error_code{error, std::system_category()};
+        }
+
         Socket_.SetRemoteAddress(std::move(Dest_));
         return std::error_code{};
     }

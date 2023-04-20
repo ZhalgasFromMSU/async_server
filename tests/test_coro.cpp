@@ -1,3 +1,4 @@
+#include "utils.hpp"
 #include <coro/coroutine.hpp>
 #include <thread/wait_group.hpp>
 #include <io/well_known_structs.hpp>
@@ -29,13 +30,6 @@ struct TScopeGuard {
     std::function<void()> OnDestructor;
 };
 
-template<typename T>
-bool IsReady(std::future<T>& future) {
-    auto res = future.wait_for(std::chrono::seconds::zero());
-    VERIFY(res != std::future_status::deferred);
-    return res == std::future_status::ready;
-}
-
 TEST_F(Coro, Coro) {
     auto coro = [](const TIoObject& pipeOut, TWaitGroup& wg) -> TCoroFuture<int> {
         TScopeGuard guard{[&wg] { wg.Done(); }};
@@ -54,11 +48,11 @@ TEST_F(Coro, Coro) {
 
     auto future = task.Run();
     ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
-    ASSERT_FALSE(IsReady(future));
+    ASSERT_FALSE(NPrivate::IsReady(future));
 
     ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
     ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
-    ASSERT_TRUE(IsReady(future));
+    ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }
 
@@ -83,11 +77,11 @@ TEST_F(Coro, VoidCoro) {
 
     auto future = task.Run();
     ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
-    ASSERT_FALSE(IsReady(future));
+    ASSERT_FALSE(NPrivate::IsReady(future));
 
     ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
     ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
-    ASSERT_TRUE(IsReady(future));
+    ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(sharedNumRead, 1);
 }
 
@@ -113,11 +107,11 @@ TEST_F(Coro, NestedCoro) {
 
     auto future = task.Run();
     ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
-    ASSERT_FALSE(IsReady(future));
+    ASSERT_FALSE(NPrivate::IsReady(future));
 
     ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
     ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
-    ASSERT_TRUE(IsReady(future));
+    ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }
 
@@ -131,9 +125,9 @@ TEST_F(Coro, WithoutEpoll) {
     task.SetThreadPool(&ThreadPool);
 
     auto future = task.Run();
-    ASSERT_FALSE(IsReady(future));
+    ASSERT_FALSE(NPrivate::IsReady(future));
     future.wait_for(std::chrono::milliseconds(1500));
-    ASSERT_TRUE(IsReady(future));
+    ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }
 
@@ -151,10 +145,10 @@ TEST_F(Coro, WithoutThreadPool) {
     wg.Add(1);
 
     auto future = task.Run();
-    ASSERT_FALSE(IsReady(future));
+    ASSERT_FALSE(NPrivate::IsReady(future));
     ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
     wg.WaitFor(std::chrono::seconds(1));
-    ASSERT_TRUE(IsReady(future));
+    ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }
 
@@ -165,7 +159,7 @@ TEST_F(Coro, WithoutEpollAndThreadPool) {
     };
 
     auto future = coro().Run();
-    ASSERT_TRUE(IsReady(future));
+    ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }
 
@@ -180,6 +174,6 @@ TEST_F(Coro, NestedCoroWithoutEpollAndThreadPool) {
     };
 
     auto future = coro().Run();
-    ASSERT_TRUE(IsReady(future));
+    ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }

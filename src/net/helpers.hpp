@@ -9,8 +9,12 @@
 namespace NAsync::NPrivate {
 
     template<typename To, typename From>
-    const To* ConstPtrCast(const From* ptr) {
-        return static_cast<const To*>(static_cast<const void*>(ptr));
+    std::conditional_t<std::is_const_v<From>, const To, To>* PtrCast(From* ptr) {
+        if constexpr (std::is_const_v<From>) {
+            return static_cast<const To*>(static_cast<const void*>(ptr));
+        } else {
+            return static_cast<To*>(static_cast<void*>(ptr));
+        }
     }
 
     // Converting

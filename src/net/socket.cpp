@@ -2,6 +2,7 @@
 #include "helpers.hpp"
 #include <net/socket.hpp>
 #include <net/accept_connect_awiatable.hpp>
+#include <system_error>
 
 namespace NAsync {
 
@@ -21,11 +22,11 @@ namespace NAsync {
         if (domain == AF_INET) {
             sockaddr_in raw;
             NPrivate::ConvertSockaddr(address, &raw);
-            bindRes = bind(sockFd, NPrivate::ConstPtrCast<sockaddr>(&raw), sizeof(raw));
+            bindRes = bind(sockFd, NPrivate::PtrCast<sockaddr>(&raw), sizeof(raw));
         } else if (domain == AF_INET6) {
             sockaddr_in6 raw;
             NPrivate::ConvertSockaddr(address, &raw);
-            bindRes = bind(sockFd, NPrivate::ConstPtrCast<sockaddr>(&raw), sizeof(raw));
+            bindRes = bind(sockFd, NPrivate::PtrCast<sockaddr>(&raw), sizeof(raw));
         } else {
             VERIFY(false);
         }
@@ -47,6 +48,24 @@ namespace NAsync {
     }
 
     // TSocket
+    template<>
+    TResult<TSocket> TSocket::Create<TIPv4Address>(bool streamSocket) noexcept {
+        int sockFd = socket(AF_INET, (streamSocket ? SOCK_STREAM : SOCK_DGRAM) | SOCK_NONBLOCK, 0);
+        if (sockFd == -1) {
+            return std::error_code{errno, std::system_category()};
+        }
+        return TSocket{sockFd};
+    }
+
+    template<>
+    TResult<TSocket> TSocket::Create<TIPv6Address>(bool streamSocket) noexcept {
+        int sockFd = socket(AF_INET6, (streamSocket ? SOCK_STREAM : SOCK_DGRAM) | SOCK_NONBLOCK, 0);
+        if (sockFd == -1) {
+            return std::error_code{errno, std::system_category()};
+        }
+        return TSocket{sockFd};
+    }
+
     TConnectAwaitable TSocket::Connect(TSocketAddress dest) noexcept {
         return TConnectAwaitable{*this, std::move(dest)};
     }
