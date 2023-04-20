@@ -1,5 +1,6 @@
 #include <io/well_known_structs.hpp>
 #include <io/read_write_awaitable.hpp>
+#include <system_error>
 #include <util/result.hpp>
 
 #include <fcntl.h>
@@ -11,39 +12,24 @@
 
 namespace NAsync {
 
-    namespace {
-        int CreateEventFd() noexcept {
-            int status = eventfd(0, EFD_NONBLOCK);
-            VERIFY_SYSCALL(status >= 0);
-            return status;
-        }
-    }
-
-    TPipe::TPipe(int readFd, int writeFd) noexcept
-        : WriteEnd_{writeFd}
-        , ReadEnd_{readFd}
-    {}
-
-    TPipe TPipe::Create() noexcept {
+    // TPipe
+    TResult<TPipe> TPipe::Create() noexcept {
         int pipeFds[2];
-        VERIFY_SYSCALL(pipe2(pipeFds, O_NONBLOCK) == 0);
+        int status = pipe2(pipeFds, O_NONBLOCK);
+        if (status == -1) {
+            return std::error_code{errno, std::system_category()};
+        }
         return TPipe(pipeFds[0], pipeFds[1]);
     }
 
-    const TIoObject& TPipe::ReadEnd() const noexcept {
-        return ReadEnd_;
-    }
+    // TEventFd
+    TResult<TEventFd> TEventFd::Create() noexcept {
+        int fd = eventfd(0, EFD_NONBLOCK);
+        if (fd == -1) {
+            return std::error_code{errno, std::system_category()};
+        }
 
-    const TIoObject& TPipe::WriteEnd() const noexcept {
-        return WriteEnd_;
-    }
-
-    TEventFd::TEventFd() noexcept
-        : TIoObject(CreateEventFd())
-    {}
-
-    bool TEventFd::IsSet() const noexcept {
-        return IsSet_;
+        return TEventFd{fd};
     }
 
     void TEventFd::Set() noexcept {
