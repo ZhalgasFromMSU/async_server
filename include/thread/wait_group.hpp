@@ -9,8 +9,9 @@ namespace NAsync {
     // Same as golang's sync.WaitGroup, but Wait has timeout
     class TWaitGroup {
     public:
-        void Add(int delta) noexcept;
+        void Add(int delta = 1) noexcept;
         void Done() noexcept;
+        void Block() noexcept;
 
         void Wait() noexcept;
 
@@ -19,6 +20,7 @@ namespace NAsync {
 
     private:
         // Can't use std::atomic here, because it doesn't have wait_for method
+        bool Blocked_ = false;
         int Counter_ = 0;
         std::mutex Mutex_;
         std::condition_variable CondVar_;

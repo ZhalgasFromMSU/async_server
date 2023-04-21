@@ -3,13 +3,10 @@
 #include <io/io_object.hpp>
 #include <io/well_known_structs.hpp>
 #include <util/task.hpp>
-#include <util/result.hpp>
 
 #include <unordered_map>
-#include <system_error>
-#include <functional>
-#include <list>
-#include <future>
+#include <memory>
+#include <thread>
 
 namespace NAsync {
 
@@ -22,27 +19,28 @@ namespace NAsync {
             kWrite,
         };
 
+        // static TResult<std::shared_ptr<TEpoll>> Create() noexcept;
         TEpoll() noexcept;
-        ~TEpoll() noexcept;
+        ~TEpoll();
+
+        void Start() noexcept;
+        void Stop() noexcept;
 
         // All callbacks are executed synchronously
-        std::error_code Watch(const TIoObject& io, std::unique_ptr<ITask> task, EMode mode) noexcept;
+        std::error_code Watch(const TIoObject& io, std::unique_ptr<ITask> callback, EMode mode) noexcept;
 
         template<CVoidToVoid TFunc>
-        std::error_code Watch(const TIoObject& io, TFunc&& func, EMode mode) noexcept {
-            return Watch(io, new TTask(std::forward<TFunc>(func)), mode);
+        std::error_code Watch(const TIoObject& io, TFunc&& callback, EMode mode) noexcept {
+            return Watch(io, new TTask(std::forward<TFunc>(callback)), mode);
         }
 
     private:
-        void PollLoop() noexcept;
-
         TEventFd EventFd_;
-        std::atomic<bool> EpollStopped_;
-        std::thread EpollBackgroundThread_;
+        std::unordered_map<int, std::unique_ptr<ITask>> Callbacks_; // <fd, callback>
 
-        std::mutex CallbacksMutex_;
-        std::list<std::unique_ptr<ITask>> Callbacks_;
-        std::unordered_map<int, std::list<TCallback>::iterator> FdIteratorMapping_;
+        std::mutex Mutex_;
+        std::atomic<bool> Stopped_ = false;
+        std::thread Worker_;
     };
 
 } // namespace NAsync

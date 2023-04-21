@@ -30,7 +30,7 @@ namespace NAsync {
     // Eventfd is not readable by default
     class TEventFd: public TIoObject {
     public:
-        static TResult<TEventFd> Create() noexcept;
+        TEventFd() noexcept;
 
         inline bool IsSet() const noexcept {
             return IsSet_;
@@ -40,10 +40,6 @@ namespace NAsync {
         void Reset() noexcept; // Nullify event fd to make it pollable
 
     private:
-        TEventFd(int fd) noexcept
-            : TIoObject{fd}
-        {}
-
         bool IsSet_ = false;
     };
 

@@ -1,9 +1,19 @@
 #include <iostream>
-#include "a.hpp"
+#include <thread>
 
+
+struct A {
+
+    void Foo() {
+        T = std::thread{[this] {
+            std::cerr << this << std::endl;
+        }};
+    };
+
+    std::thread T;
+};
 
 int main() {
-    A a;
-    a.Foo<int>(1);
+
     return 0;
 }

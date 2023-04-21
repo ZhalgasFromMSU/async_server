@@ -1,94 +1,87 @@
 #include <polling/epoll.hpp>
-#include <util/result.hpp>
+
+#include <mutex>
 
 #include <sys/epoll.h>
-#include <sys/unistd.h>
-#include <sys/eventfd.h>
-#include <errno.h>
 #include <cstring>
-
-#include <system_error>
-#include <future>
 
 namespace NAsync {
 
     namespace {
-        enum class EEpollMode {
-            kRead,
-            kWrite,
-        };
-
-        int CreateEpollFd() noexcept {
-            int status = epoll_create1(0);
-            VERIFY_SYSCALL(status >= 0);
-            return status;
-        }
-
-        int AddFdToEpoll(int epollFd, int fdToWatch, EEpollMode mode) noexcept {
-            epoll_event eventToAdd;
-            memset(&eventToAdd, 0, sizeof(eventToAdd));
-            eventToAdd.data.fd = fdToWatch;
-            if (mode == EEpollMode::kRead) {
-                eventToAdd.events = EPOLLIN | EPOLLET | EPOLLONESHOT; // not sure about epolloneshot, maybe do it under flag
-            } else { // EEpollMode::kWrite
-                eventToAdd.events = EPOLLOUT | EPOLLET | EPOLLONESHOT;
+        std::error_code AddFdToEpoll(int epollFd, int fd, TEpoll::EMode mode) noexcept {
+            epoll_event event;
+            memset(&event, 0, sizeof(event));
+            event.data.fd = fd;
+            switch (mode) {
+                case TEpoll::EMode::kRead:
+                    event.events = EPOLLIN;
+                    break;
+                case TEpoll::EMode::kWrite:
+                    event.events = EPOLLOUT;
+                    break;
+                default:
+                    VERIFY(false);
             }
-            return epoll_ctl(epollFd, EPOLL_CTL_ADD, fdToWatch, &eventToAdd);
-        }
-    }
 
+            event.events |= EPOLLET | EPOLLONESHOT;
+            int status = epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event);
+            if (status == -1) {
+                return std::error_code{errno, std::system_category()};
+            }
+            return std::error_code{};
+        }
+    } // namespace
+
+    // TEpoll
     TEpoll::TEpoll() noexcept
-        : EpollFd_{CreateEpollFd()}
-        , EpollStopped_{false}
-        , EpollBackgroundThread_{&NAsync::TEpoll::PollLoop, this}
+        : TIoObject{epoll_create1(0)}
     {
-        VERIFY_SYSCALL(AddFdToEpoll(EpollFd_.Fd(), EventFd_.Fd(), EEpollMode::kRead) >= 0);
+        VERIFY_EC(Watch(EventFd_, []{}, TEpoll::EMode::kRead));
     }
 
-    TEpoll::~TEpoll() noexcept {
-        EpollStopped_ = true;
+    TEpoll::~TEpoll() {
+        if (!Stopped_) {
+            Stop();
+        }
+    }
+
+    void TEpoll::Start() noexcept {
+        Worker_ = std::thread {[this] {
+            static constexpr size_t bSize = 1024;
+            epoll_event buffer[bSize];
+            while (!Stopped_) {
+                int numReady = epoll_wait(Fd(), buffer, bSize, -1 /* timeout */);
+                VERIFY_SYSCALL(numReady != -1);
+
+                std::scoped_lock lock{Mutex_};
+                for (int i = 0; i < numReady; ++i) {
+                    auto node = Callbacks_.extract(buffer[i].data.fd);
+                    VERIFY(!node.empty());
+                    node.mapped()->Execute();
+                }
+            }
+        }};
+    }
+
+    void TEpoll::Stop() noexcept {
+        Stopped_ = true;
         EventFd_.Set();
-        EpollBackgroundThread_.join();
+        Worker_.join();
+
+        std::scoped_lock lock{Mutex_};
+        while (!Callbacks_.empty()) {
+            auto node = Callbacks_.extract(Callbacks_.begin());
+            node.mapped()->Execute();
+        }
     }
 
-    std::error_code TEpoll::WatchForRead(const TIoObject& io, TCallback callback) noexcept {
-        std::scoped_lock lock{CallbacksMutex_};
-        auto it = Callbacks_.insert(Callbacks_.end(), std::move(callback));
-        FdIteratorMapping_[io.Fd()] = it;
-        if (AddFdToEpoll(EpollFd_.Fd(), io.Fd(), EEpollMode::kRead) < 0) { // epoll is thread safe
-            return std::error_code{errno, std::system_category()};
+    std::error_code TEpoll::Watch(const TIoObject& io, std::unique_ptr<ITask> callback, TEpoll::EMode mode) noexcept {
+        std::scoped_lock lock{Mutex_};
+        if (Stopped_) {
+            return std::error_code{EBADF, std::system_category()};
         }
-        return {};
-    }
-
-
-    std::error_code TEpoll::WatchForWrite(const TIoObject& io, TCallback callback) noexcept {
-        std::scoped_lock lock{CallbacksMutex_};
-        auto it = Callbacks_.insert(Callbacks_.end(), std::move(callback));
-        FdIteratorMapping_[io.Fd()] = it;
-        if (AddFdToEpoll(EpollFd_.Fd(), io.Fd(), EEpollMode::kWrite) < 0) { // epoll is thread safe
-            return std::error_code{errno, std::system_category()};
-        }
-        return {};
-    }
-
-    void TEpoll::PollLoop() noexcept {
-        constexpr static size_t epollBuffSize = 1024;
-        epoll_event buffer[epollBuffSize];
-        while (true) {
-            int status = epoll_wait(EpollFd_.Fd(), buffer, epollBuffSize, -1);
-            VERIFY_SYSCALL(status >= 0);
-            if (EpollStopped_) {
-                break;
-            }
-            std::scoped_lock lock{CallbacksMutex_};
-            for (int i = 0; i < status; ++i) {
-                auto callbackIt = FdIteratorMapping_.at(buffer[i].data.fd);
-                (*callbackIt)();
-                FdIteratorMapping_.erase(buffer[i].data.fd);
-                Callbacks_.erase(callbackIt);
-            }
-        }
+        Callbacks_[io.Fd()] = std::move(callback);
+        return AddFdToEpoll(Fd(), io.Fd(), mode);
     }
 
 } // namespace NAsync

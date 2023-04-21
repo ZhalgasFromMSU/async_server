@@ -17,12 +17,14 @@ namespace NAsync {
 
         int bindRes = bind(sockFd, cv.Raw(), cv.Size());
         if (bindRes == -1) {
+            VERIFY(close(sockFd) == 0);
             return std::error_code{errno, std::system_category()};
         }
 
         NPrivate::TConverter cv2;
         int gsnRes = getsockname(sockFd, cv2.MutRaw(), cv2.MutSize());
         if (gsnRes == -1) {
+            VERIFY(close(sockFd) == 0);
             return std::error_code{errno, std::system_category()};
         }
 
@@ -30,6 +32,7 @@ namespace NAsync {
 
         int listenRes = listen(sockFd, queueSize);
         if (listenRes == -1) {
+            VERIFY(close(sockFd) == 0);
             return std::error_code{errno, std::system_category()};
         }
 

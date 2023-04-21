@@ -16,13 +16,7 @@ namespace NAsync {
     }
 
     void TWaitGroup::Done() noexcept {
-        std::scoped_lock lock{Mutex_};
-        Counter_ -= 1;
-        if (Counter_ == 0) {
-            CondVar_.notify_all();
-            return;
-        }
-        VERIFY(Counter_ >= 0);
+        Add(-1);
     }
 
     void TWaitGroup::Wait() noexcept {

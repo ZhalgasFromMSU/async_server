@@ -23,14 +23,9 @@ namespace NAsync {
     }
 
     // TEventFd
-    TResult<TEventFd> TEventFd::Create() noexcept {
-        int fd = eventfd(0, EFD_NONBLOCK);
-        if (fd == -1) {
-            return std::error_code{errno, std::system_category()};
-        }
-
-        return TEventFd{fd};
-    }
+    TEventFd::TEventFd() noexcept
+        : TIoObject{eventfd(0, EFD_NONBLOCK)}
+    {}
 
     void TEventFd::Set() noexcept {
         constexpr uint64_t numToWrite = 1;
