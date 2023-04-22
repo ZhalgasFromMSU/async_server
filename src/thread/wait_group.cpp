@@ -5,7 +5,7 @@
 
 namespace NAsync {
 
-    bool TCounter::Inc() noexcept {
+    bool TWaitGroup::Inc() noexcept {
         int current = Counter_;
         while (current >= 0) {
             if (Counter_.compare_exchange_weak(current, current + 1)) {
@@ -15,13 +15,15 @@ namespace NAsync {
         return false;
     }
 
-    void TCounter::Dec() noexcept {
+    void TWaitGroup::Dec() noexcept {
         int current = Counter_;
         while (true) {
             VERIFY(current != 0 && current != NegZero_);
             int newVal;
             if (current > 0) {
                 newVal = current - 1;
+            } else if (current == -1) {
+                newVal = NegZero_;
             } else {  // current < 0
                 newVal = current + 1;
             }
@@ -35,7 +37,7 @@ namespace NAsync {
         }
     }
 
-    void TCounter::BlockAndWait() noexcept {
+    void TWaitGroup::BlockAndWait() noexcept {
         int current = Counter_;
         while (true) {
             int newVal;

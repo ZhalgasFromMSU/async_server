@@ -17,6 +17,10 @@ namespace NAsync {
         void Dec() noexcept;
         void BlockAndWait() noexcept;
 
+        inline bool Blocked() const noexcept {
+            return Counter_ == NegZero_;
+        }
+
     private:
         static constexpr int NegZero_ = std::numeric_limits<int>::min();
 
