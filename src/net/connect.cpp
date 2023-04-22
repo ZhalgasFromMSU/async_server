@@ -20,11 +20,11 @@ namespace NAsync {
 
     void TConnectAwaitable::await_suspend(std::coroutine_handle<> handle) noexcept {
         if (ThreadPool) {
-            Epoll->WatchForWrite(Socket_, [this, handle] {
+            Epoll->Watch(TEpoll::EMode::kWrite, Socket_, [this, handle] {
                 VERIFY(ThreadPool->EnqueJob(handle));
             });
         } else {
-            Epoll->WatchForWrite(Socket_, handle);
+            Epoll->Watch(TEpoll::EMode::kWrite, Socket_, handle);
         }
     }
 

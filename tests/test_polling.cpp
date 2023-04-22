@@ -26,21 +26,21 @@ struct Epoll: testing::Test {
 
 TEST_F(Epoll, StartAndShutdown) {
     auto pipe = TPipe::Create();
-    epoll.WatchForRead(pipe.ReadEnd(), {});
+    epoll.Watch(TEpoll::EMode::kRead, pipe->ReadEnd(), {});
 }
 
 TEST_F(Epoll, Eventfd) {
     TEventFd eventfd;
 
     TWaitGroup wg;
-    wg.Add(1);
+    wg.Inc();
 
-    epoll.WatchForRead(eventfd, [&wg] {
-        wg.Done();
+    epoll.Watch(TEpoll::EMode::kRead, eventfd, [&wg] {
+        wg.Dec();
     });
 
     eventfd.Set();
-    wg.WaitFor(std::chrono::milliseconds(100));
+    wg.BlockAndWait();
 }
 
 TEST_F(Epoll, AddingOneFd) {
@@ -51,19 +51,19 @@ TEST_F(Epoll, AddingOneFd) {
     char output[size];
     memset(output, 0, size);
 
-    auto readResult = pipe.ReadEnd().Read(output, size).await_resume();
+    auto readResult = pipe->ReadEnd().Read(output, size).await_resume();
     // check that can't read right now
     ASSERT_EQ(readResult.Error(), std::error_code(EAGAIN, std::system_category()));
 
     TWaitGroup wg;
-    wg.Add(1);
-    VERIFY_EC(epoll.WatchForRead(pipe.ReadEnd(), [&] {
-        ASSERT_EQ(*pipe.ReadEnd().Read(output, size).await_resume(), size);
-        wg.Done();
+    wg.Inc();
+    VERIFY_EC(epoll.Watch(TEpoll::EMode::kRead, pipe->ReadEnd(), [&] {
+        ASSERT_EQ(*pipe->ReadEnd().Read(output, size).await_resume(), size);
+        wg.Dec();
     }));
     ASSERT_EQ(strncmp(output, "\0\0\0\0", size), 0);
-    ASSERT_EQ(*pipe.WriteEnd().Write(input, size).await_resume(), size);
-    wg.WaitFor(std::chrono::milliseconds(100));
+    ASSERT_EQ(*pipe->WriteEnd().Write(input, size).await_resume(), size);
+    wg.BlockAndWait();
     ASSERT_EQ(strcmp(input, output), 0);
 }
 
@@ -71,14 +71,14 @@ TEST_F(Epoll, EventRemovedFromWatchlist) {
     TEventFd eventfd;
 
     TWaitGroup wg;
-    wg.Add(1);
-    epoll.WatchForRead(eventfd, [&wg, &eventfd] {
+    wg.Inc();
+    epoll.Watch(TEpoll::EMode::kRead, eventfd, [&wg, &eventfd] {
         eventfd.Reset();
-        wg.Done();
+        wg.Dec();
     });
 
     eventfd.Set();
-    wg.WaitFor(std::chrono::milliseconds(100));
+    wg.BlockAndWait();
     ASSERT_FALSE(eventfd.IsSet());
     eventfd.Set(); // Calling callback second time will call std::terminate, because TWaitGroup counter cannot go below 0;
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); // for epoll to have time to wake up
@@ -91,16 +91,16 @@ TEST_F(Epoll, MultipleFds) {
     TWaitGroup wg;
     std::atomic<int> value;
     for (int i = 0; i < numEvents; ++i) {
-        epoll.WatchForRead(eventFds[i], [&value, &wg, i] {
+        epoll.Watch(TEpoll::EMode::kRead, eventFds[i], [&value, &wg, i] {
             value = i;
-            wg.Done();
+            wg.Dec();
         });
     }
 
     for (int i = numEvents - 1; i >= 0; --i) {
-        wg.Add(1);
+        wg.Inc();
         eventFds[i].Set();
-        wg.WaitFor(std::chrono::milliseconds(100));
+        wg.BlockAndWait();
         ASSERT_EQ(value, i);
     }
 }
@@ -127,14 +127,14 @@ TEST_F(Epoll, MultipleFdsAsync) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(randomSleepIntervalsMs[i - 1]));
                 TWaitGroup wg;
                 TEventFd eventfd;
-                wg.Add(1);
-                epoll.WatchForRead(eventfd, [&counter, &wg, i] {
+                wg.Inc();
+                epoll.Watch(TEpoll::EMode::kRead, eventfd, [&counter, &wg, i] {
                     counter += i;
-                    wg.Done();
+                    wg.Dec();
                 });
                 std::this_thread::sleep_for(std::chrono::milliseconds(randomSleepIntervalsMs[i - 1]));
                 eventfd.Set();
-                wg.WaitFor(std::chrono::milliseconds(100));
+                wg.BlockAndWait();
             }
         );
     }

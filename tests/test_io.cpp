@@ -32,13 +32,13 @@ TEST(IoObject, PipeReadWrite) {
     auto pipe = TPipe::Create();
 
     const char strToWrite[] = "12345";
-    auto writeResult = pipe.WriteEnd().Write(strToWrite, sizeof(strToWrite)).await_resume();
+    auto writeResult = pipe->WriteEnd().Write(strToWrite, sizeof(strToWrite)).await_resume();
     VERIFY_RESULT(writeResult);
     ASSERT_EQ(*writeResult, sizeof(strToWrite));
 
     constexpr int readBufSize = sizeof(strToWrite) * 3;
     char readBuf[readBufSize];
-    auto readResult = pipe.ReadEnd().Read(readBuf, readBufSize).await_resume();
+    auto readResult = pipe->ReadEnd().Read(readBuf, readBufSize).await_resume();
     VERIFY_RESULT(readResult);
     ASSERT_EQ(strcmp(readBuf, strToWrite), 0);
     ASSERT_EQ(*readResult, sizeof(strToWrite));
@@ -47,9 +47,9 @@ TEST(IoObject, PipeReadWrite) {
 TEST(IoObject, PollableObject) {
     auto pipe = TPipe::Create();
     char buffer[10];
-    TReadAwaitable read{pipe.ReadEnd(), buffer, sizeof(buffer)};
+    TReadAwaitable read{pipe->ReadEnd(), buffer, sizeof(buffer)};
     ASSERT_FALSE(read.await_resume());
-    TWriteAwaitable write{pipe.WriteEnd(), "1234", 4};
+    TWriteAwaitable write{pipe->WriteEnd(), "1234", 4};
     ASSERT_EQ(*write.await_resume(), 4);
     ASSERT_EQ(*read.await_resume(), 4);
 }

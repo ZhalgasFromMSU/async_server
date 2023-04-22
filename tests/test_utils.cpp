@@ -1,5 +1,5 @@
 #include <util/result.hpp>
-#include <util/list.hpp>
+#include <util/queue.hpp>
 
 #include <gtest/gtest.h>
 
@@ -108,38 +108,3 @@ TEST(Errors, VerifyResult) {
     EXPECT_DEATH(VERIFY_RESULT(res), res.Error().message());
 }
 
-TEST(List, EraseBack) {
-    NAsync::TList<int> list;
-
-    auto numbers = {1, 2, 3, 4, 5};
-
-    for (int i : numbers) {
-        list.push_back(i);
-        ASSERT_EQ(list.tail_pointer()->Val(), i);
-    }
-    ASSERT_EQ(list.size(), numbers.size());
-
-    for (auto it = std::rbegin(numbers); it != std::rend(numbers); ++it) {
-        ASSERT_EQ(list.tail_pointer()->Val(), *it);
-        list.erase(list.tail_pointer());
-    }
-
-    ASSERT_EQ(list.size(), 0);
-}
-
-TEST(List, EraseMiddle) {
-    NAsync::TList<int> list;
-    std::unordered_map<int, NAsync::TList<int>::TNode*> pointers;
-
-    for (int i : {1, 2, 3, 4, 5}) {
-        list.push_back(i);
-        pointers[i] = list.tail_pointer();
-    }
-
-    // erase elems in random order
-    for (int i : {3, 5, 1, 2, 4}) {
-        list.erase(pointers[i]);
-    }
-
-    ASSERT_EQ(list.size(), 0);
-}

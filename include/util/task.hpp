@@ -18,8 +18,8 @@ namespace NAsync {
     template<CVoidToVoid TFunc>
     class TTask: public ITask {
     public:
-        TTask(TFunc func)
-            : Func_(std::move(func))
+        TTask(TFunc&& func)
+            : Func_(std::forward<TFunc>(func))
         {}
 
         void Execute() override {

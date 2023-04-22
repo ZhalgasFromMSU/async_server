@@ -36,7 +36,7 @@ namespace NAsync {
     TEpoll::TEpoll() noexcept
         : TIoObject{epoll_create1(0)}
     {
-        VERIFY_EC(Watch(EventFd_, []{}, TEpoll::EMode::kRead));
+        VERIFY_EC(Watch(TEpoll::EMode::kRead, EventFd_, []{}));
     }
 
     TEpoll::~TEpoll() {
@@ -75,7 +75,7 @@ namespace NAsync {
         }
     }
 
-    std::error_code TEpoll::Watch(const TIoObject& io, std::unique_ptr<ITask> callback, TEpoll::EMode mode) noexcept {
+    std::error_code TEpoll::Watch(EMode mode, const TIoObject& io, std::unique_ptr<ITask> callback) noexcept {
         std::scoped_lock lock{Mutex_};
         if (Stopped_) {
             return std::error_code{EBADF, std::system_category()};

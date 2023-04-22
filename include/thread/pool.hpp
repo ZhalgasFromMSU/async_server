@@ -26,7 +26,7 @@ namespace NAsync {
             if (PoolStopped_) {
                 return false;
             }
-            JobsQueue_.emplace(new TTask(std::forward<TFunc>(func)));
+            JobsQueue_.emplace(new TTask<TFunc>(std::forward<TFunc>(func)));
             JobsCV_.notify_one();
             return true;
         }

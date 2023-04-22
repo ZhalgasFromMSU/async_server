@@ -20,11 +20,11 @@ namespace NAsync {
 
     void TAcceptAwaitable::await_suspend(std::coroutine_handle<> handle) noexcept {
         if (ThreadPool) {
-            Epoll->WatchForRead(Acceptor_, [this, handle] {
+            Epoll->Watch(TEpoll::EMode::kRead, Acceptor_, [this, handle] {
                 VERIFY(ThreadPool->EnqueJob(handle));
             });
         } else {
-            Epoll->WatchForRead(Acceptor_, handle);
+            Epoll->Watch(TEpoll::EMode::kRead, Acceptor_, handle);
         }
     }
 

@@ -27,11 +27,11 @@ namespace NAsync {
         void Stop() noexcept;
 
         // All callbacks are executed synchronously
-        std::error_code Watch(const TIoObject& io, std::unique_ptr<ITask> callback, EMode mode) noexcept;
+        std::error_code Watch(EMode mode, const TIoObject& io, std::unique_ptr<ITask> callback) noexcept;
 
         template<CVoidToVoid TFunc>
-        std::error_code Watch(const TIoObject& io, TFunc&& callback, EMode mode) noexcept {
-            return Watch(io, new TTask(std::forward<TFunc>(callback)), mode);
+        std::error_code Watch(EMode mode, const TIoObject& io, TFunc&& callback) noexcept {
+            return Watch(mode, io, std::make_unique<TTask<TFunc>>(std::forward<TFunc>(callback)));
         }
 
     private:

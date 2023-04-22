@@ -46,11 +46,11 @@ namespace NAsync {
 
     void TReadAwaitable::await_suspend(std::coroutine_handle<> handle) const noexcept {
         if (ThreadPool) {
-            Epoll->WatchForRead(IoObject_, [this, handle] {
+            Epoll->Watch(TEpoll::EMode::kRead, IoObject_, [this, handle] {
                 VERIFY(ThreadPool->EnqueJob(handle));
             });
         } else {
-            Epoll->WatchForRead(IoObject_, handle);
+            Epoll->Watch(TEpoll::EMode::kRead, IoObject_, handle);
         }
     }
 
@@ -73,11 +73,11 @@ namespace NAsync {
 
     void TWriteAwaitable::await_suspend(std::coroutine_handle<> handle) const noexcept {
         if (ThreadPool) {
-            Epoll->WatchForWrite(IoObject_, [this, handle] {
+            Epoll->Watch(TEpoll::EMode::kWrite, IoObject_, [this, handle] {
                 VERIFY(ThreadPool->EnqueJob(handle));
             });
         } else {
-            Epoll->WatchForWrite(IoObject_, handle);
+            Epoll->Watch(TEpoll::EMode::kWrite, IoObject_, handle);
         }
     }
 

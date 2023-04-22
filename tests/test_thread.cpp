@@ -45,17 +45,16 @@ TEST(ThreadPool, EnqueAfterFinish) {
 TEST(WaitGroup, WaitSuccess) {
     int numTasks = 10;
 
-    NAsync::TWaitGroup wg;
-    wg.Add(numTasks);
+    NAsync::TWaitGroup wg{numTasks};
 
-    std::future<void> waitResult = std::async(&NAsync::TWaitGroup::Wait, &wg);
+    std::future<void> waitResult = std::async(&NAsync::TWaitGroup::BlockAndWait, &wg);
 
     std::stack<std::future<int>> tasks;
     for (int i = 0; i < numTasks; ++i) {
         tasks.emplace(std::async(
             std::launch::deferred,
             [&wg, i] {
-                wg.Done();
+                wg.Dec();
                 return i;
             }
         ));
@@ -71,19 +70,8 @@ TEST(WaitGroup, WaitSuccess) {
     ASSERT_EQ(waitResult.wait_for(std::chrono::microseconds(1000000)), std::future_status::ready);
 }
 
-TEST(WaitGroup, WaitFail) {
-    NAsync::TWaitGroup wg;
-    wg.Add(1);
-
-    std::future<bool> waitResult = std::async(&NAsync::TWaitGroup::WaitFor, &wg, std::chrono::microseconds(1000));
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    ASSERT_EQ(waitResult.wait_for(std::chrono::seconds::zero()), std::future_status::ready);
-    ASSERT_EQ(waitResult.get(), false);
-}
-
 TEST(WaitGroup, Terminate) {
-    NAsync::TWaitGroup wg;
-    wg.Add(1);
-    wg.Done();
-    EXPECT_DEATH(wg.Done(), "Assertion failed");
+    NAsync::TWaitGroup wg{1};
+    wg.Dec();
+    EXPECT_DEATH(wg.Dec(), "Assertion failed");
 }

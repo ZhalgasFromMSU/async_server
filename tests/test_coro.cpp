@@ -32,26 +32,24 @@ struct TScopeGuard {
 
 TEST_F(Coro, Coro) {
     auto coro = [](const TIoObject& pipeOut, TWaitGroup& wg) -> TCoroFuture<int> {
-        TScopeGuard guard{[&wg] { wg.Done(); }};
+        TScopeGuard guard{[&wg] { wg.Dec(); }};
         char out[1];
         auto numRead = co_await TReadAwaitable(pipeOut, out, 1);
         co_return *numRead;
     };
 
     TWaitGroup wg;
-    TPipe pipe = TPipe::Create();
+    auto pipe = TPipe::Create();
 
-    auto task = coro(pipe.ReadEnd(), wg);
+    auto task = coro(pipe->ReadEnd(), wg);
     task.SetEpoll(&Epoll);
     task.SetThreadPool(&ThreadPool);
-    wg.Add(1);
+    wg.Inc();
 
     auto future = task.Run();
-    ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
     ASSERT_FALSE(NPrivate::IsReady(future));
 
-    ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
-    ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
+    ASSERT_EQ(*pipe->WriteEnd().Write("1", 1).await_resume(), 1);
     ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }
@@ -60,7 +58,7 @@ TEST_F(Coro, VoidCoro) {
     std::atomic<int> sharedNumRead;
 
     auto coro = [&sharedNumRead](const TIoObject& pipeOut, TWaitGroup& wg) -> TCoroFuture<void> {
-        TScopeGuard guard{[&wg] { wg.Done(); }};
+        TScopeGuard guard{[&wg] { wg.Dec(); }};
         char out[1];
         auto numRead = co_await TReadAwaitable(pipeOut, out, 1);
         sharedNumRead = *numRead;
@@ -68,26 +66,24 @@ TEST_F(Coro, VoidCoro) {
     };
 
     TWaitGroup wg;
-    TPipe pipe = TPipe::Create();
+    auto pipe = TPipe::Create();
 
-    auto task = coro(pipe.ReadEnd(), wg);
+    auto task = coro(pipe->ReadEnd(), wg);
     task.SetEpoll(&Epoll);
     task.SetThreadPool(&ThreadPool);
-    wg.Add(1);
+    wg.Inc();
 
     auto future = task.Run();
-    ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
     ASSERT_FALSE(NPrivate::IsReady(future));
 
-    ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
-    ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
+    ASSERT_EQ(*pipe->WriteEnd().Write("1", 1).await_resume(), 1);
     ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(sharedNumRead, 1);
 }
 
 TEST_F(Coro, NestedCoro) {
     auto coro = [this](const TIoObject& pipeOut, TWaitGroup& wg) -> TCoroFuture<int> {
-        TScopeGuard guard {[&wg] { wg.Done(); }};
+        TScopeGuard guard {[&wg] { wg.Dec(); }};
 
         auto innerCoro = [](const TIoObject& pipeOut) -> TCoroFuture<int> {
             char out[1];
@@ -98,19 +94,19 @@ TEST_F(Coro, NestedCoro) {
     };
 
     TWaitGroup wg;
-    TPipe pipe = TPipe::Create();
+    auto pipe = TPipe::Create();
 
-    auto task = coro(pipe.ReadEnd(), wg);
+    auto task = coro(pipe->ReadEnd(), wg);
     task.SetEpoll(&Epoll);
     task.SetThreadPool(&ThreadPool);
-    wg.Add(1);
+    wg.Inc();
 
     auto future = task.Run();
-    ASSERT_FALSE(wg.WaitFor(std::chrono::milliseconds(10)));
+    wg.BlockAndWait();
     ASSERT_FALSE(NPrivate::IsReady(future));
 
-    ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
-    ASSERT_TRUE(wg.WaitFor(std::chrono::seconds(1)));
+    ASSERT_EQ(*pipe->WriteEnd().Write("1", 1).await_resume(), 1);
+    wg.BlockAndWait();
     ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }
@@ -133,21 +129,21 @@ TEST_F(Coro, WithoutEpoll) {
 
 TEST_F(Coro, WithoutThreadPool) {
     auto coro = [](const TIoObject& pipeRead, TWaitGroup& wg) -> TCoroFuture<int> {
-        TScopeGuard guard{[&wg] { wg.Done(); }};
+        TScopeGuard guard{[&wg] { wg.Dec(); }};
         char out[1];
         co_return *(co_await TReadAwaitable(pipeRead, out, 1));
     };
 
     TWaitGroup wg;
-    TPipe pipe = TPipe::Create();
-    auto task = coro(pipe.ReadEnd(), wg);
+    auto pipe = TPipe::Create();
+    auto task = coro(pipe->ReadEnd(), wg);
     task.SetEpoll(&Epoll);
-    wg.Add(1);
+    wg.Inc();
 
     auto future = task.Run();
     ASSERT_FALSE(NPrivate::IsReady(future));
-    ASSERT_EQ(*pipe.WriteEnd().Write("1", 1).await_resume(), 1);
-    wg.WaitFor(std::chrono::seconds(1));
+    ASSERT_EQ(*pipe->WriteEnd().Write("1", 1).await_resume(), 1);
+    wg.BlockAndWait();
     ASSERT_TRUE(NPrivate::IsReady(future));
     ASSERT_EQ(future.get(), 1);
 }
