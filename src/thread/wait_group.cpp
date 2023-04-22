@@ -5,33 +5,55 @@
 
 namespace NAsync {
 
-    void TWaitGroup::Add(int delta) noexcept {
-        std::scoped_lock lock{Mutex_};
-        Counter_ += delta;
-        if (Counter_ == 0) {
-            CondVar_.notify_all();
-            return;
+    bool TCounter::Inc() noexcept {
+        int current = Counter_;
+        while (current >= 0) {
+            if (Counter_.compare_exchange_weak(current, current + 1)) {
+                return true;
+            }
         }
-        VERIFY(Counter_ >= 0);
+        return false;
     }
 
-    void TWaitGroup::Done() noexcept {
-        Add(-1);
+    void TCounter::Dec() noexcept {
+        int current = Counter_;
+        while (true) {
+            VERIFY(current != 0 && current != NegZero_);
+            int newVal;
+            if (current > 0) {
+                newVal = current - 1;
+            } else {  // current < 0
+                newVal = current + 1;
+            }
+            if (Counter_.compare_exchange_weak(current, newVal)) {
+                break;
+            }
+        }
+
+        if (Counter_ == NegZero_) {
+            Counter_.notify_all();
+        }
     }
 
-    void TWaitGroup::Wait() noexcept {
-        // We cannot simply WaitFor(std::chrono::duration::max()), because of overflow in cond_var.wait_until(now() + timeout)
-        std::unique_lock lock{Mutex_};
-        CondVar_.wait(lock, [this] {
-            return Counter_ == 0;
-        });
-    }
+    void TCounter::BlockAndWait() noexcept {
+        int current = Counter_;
+        while (true) {
+            int newVal;
+            if (current > 0) {
+                newVal = -current;
+            } else if (current == 0) {
+                newVal = NegZero_;
+            }
+            if (Counter_.compare_exchange_weak(current, newVal)) {
+                break;
+            }
+        }
 
-    bool TWaitGroup::WaitFor(std::chrono::microseconds timeout) noexcept {
-        std::unique_lock lock{Mutex_};
-        return CondVar_.wait_for(lock, timeout, [this] {
-            return Counter_ == 0;
-        });
+        current = Counter_;
+        while (Counter_ != NegZero_) {
+            Counter_.wait(current);
+            current = Counter_;
+        }
     }
 
 } // namespace NAsync

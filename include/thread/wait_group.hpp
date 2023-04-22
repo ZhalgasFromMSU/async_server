@@ -1,29 +1,26 @@
 #pragma once
 
-#include <condition_variable>
-#include <system_error>
-#include <type_traits>
+#include <atomic>
+#include <limits>
 
 namespace NAsync {
 
-    // Same as golang's sync.WaitGroup, but Wait has timeout
+    // Like golang's sync.WaitGroup
+    // Despite std::latch and std::barrier, allow for counter increase
     class TWaitGroup {
     public:
-        void Add(int delta = 1) noexcept;
-        void Done() noexcept;
-        void Block() noexcept;
+        TWaitGroup(int init = 0) noexcept
+            : Counter_{init}
+        {}
 
-        void Wait() noexcept;
-
-        // return true if waited successfuly (Counter_ == 0)
-        bool WaitFor(std::chrono::microseconds timeout) noexcept;
+        bool Inc() noexcept;
+        void Dec() noexcept;
+        void BlockAndWait() noexcept;
 
     private:
-        // Can't use std::atomic here, because it doesn't have wait_for method
-        bool Blocked_ = false;
-        int Counter_ = 0;
-        std::mutex Mutex_;
-        std::condition_variable CondVar_;
+        static constexpr int NegZero_ = std::numeric_limits<int>::min();
+
+        std::atomic<int> Counter_;
     };
 
 } // namespace NAsync
