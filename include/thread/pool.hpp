@@ -1,5 +1,6 @@
 #pragma once
 
+#include "wait_group.hpp"
 #include <util/task.hpp>
 
 #include <mutex>
@@ -18,27 +19,23 @@ namespace NAsync {
         size_t QueueSize() const;
 
         void Start() noexcept;  // Create threads and start executing jobs
-        void Finish() noexcept;  // Wait for threads to finish current jobs and stop enqueing
+        void Finish() noexcept;  // Stop enqueing and wait for threads to finish queue
+
+        [[nodiscard]] bool EnqueJob(std::unique_ptr<ITask> task) noexcept;
 
         template<CVoidToVoid TFunc>
         [[nodiscard]] bool EnqueJob(TFunc&& func) noexcept {
-            std::scoped_lock lock {QueueMutex_};
-            if (PoolStopped_) {
-                return false;
-            }
-            JobsQueue_.emplace(new TTask<TFunc>(std::forward<TFunc>(func)));
-            JobsCV_.notify_one();
-            return true;
+            return EnqueJob(std::make_unique<TTask<TFunc>>(std::forward<TFunc>(func)));
         }
 
     private:
         void WorkerLoop();
 
+        TWaitGroup Wg_;
         mutable std::mutex QueueMutex_;
-        bool PoolStopped_ = false;
         std::condition_variable JobsCV_;
         std::vector<std::thread> Threads_;
-        std::queue<std::unique_ptr<ITask>> JobsQueue_; // TODO use lock-free list
+        std::queue<std::unique_ptr<ITask>> JobsQueue_; // TODO use lock-free queue
     };
 
 } // namespace NAsync

@@ -39,6 +39,10 @@ namespace NAsync {
     }
 
     void TWaitGroup::Block() noexcept {
+        if (Counter_ < 0) {
+            return;
+        }
+
         int current = Counter_;
         while (true) {
             int newVal;

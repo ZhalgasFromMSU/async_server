@@ -85,10 +85,11 @@ TEST(WaitGroup, AddFail) {
     wg.Block();
     ASSERT_FALSE(NAsync::NPrivate::IsReady(fut));
     ASSERT_FALSE(wg.Inc());
-    ASSERT_FALSE(wg.Finished());
+    ASSERT_FALSE(wg.Waited());
     wg.Dec();
     wg.Dec();
-    ASSERT_TRUE(wg.Finished());
+    ASSERT_TRUE(wg.Waited());
+    ASSERT_FALSE(wg.Inc());
     std::this_thread::sleep_for(std::chrono::microseconds(100));
     ASSERT_TRUE(NAsync::NPrivate::IsReady(fut));
     fut.get();

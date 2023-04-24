@@ -7,12 +7,13 @@ namespace NAsync {
     }
 
     TThreadPool::~TThreadPool() {
-        Finish();
+        if (!Wg_.Waited()) {
+            Finish();
+        }
     }
 
     size_t TThreadPool::QueueSize() const {
-        std::scoped_lock lock{QueueMutex_};
-        return JobsQueue_.size();
+        return Wg_.Count();
     }
 
     void TThreadPool::Start() noexcept {
@@ -22,10 +23,9 @@ namespace NAsync {
     }
 
     void TThreadPool::Finish() noexcept {
-        std::unique_lock lock {QueueMutex_};
-        PoolStopped_ = true;
+        Wg_.Block();
+        Wg_.Wait();
         JobsCV_.notify_all();
-        lock.unlock();
 
         for (auto& thread : Threads_) {
             if (thread.joinable()) {
@@ -34,21 +34,32 @@ namespace NAsync {
         }
     }
 
+    bool TThreadPool::EnqueJob(std::unique_ptr<ITask> task) noexcept {
+        if (!Wg_.Inc()) {
+            return false;
+        }
+        std::scoped_lock lock {QueueMutex_};
+        JobsQueue_.emplace(std::move(task));
+        JobsCV_.notify_one();
+        return true;
+    }
+
     void TThreadPool::WorkerLoop() {
         while (true) {
             std::unique_lock lock {QueueMutex_};
             JobsCV_.wait(lock, [this] {
-                return !JobsQueue_.empty() || PoolStopped_;
+                return !JobsQueue_.empty() || Wg_.Waited();
             });
 
-            if (!JobsQueue_.empty()) {
-                auto taskPtr = std::move(JobsQueue_.front());
-                JobsQueue_.pop();
-                lock.unlock();
-                taskPtr->Execute();
-            } else { // PoolStopped_ == true
-                break;
+            if (Wg_.Waited()) {
+                return;
             }
+
+            auto taskPtr = std::move(JobsQueue_.front());
+            JobsQueue_.pop();
+            lock.unlock();
+            taskPtr->Execute();
+            Wg_.Dec();
         }
     }
 
