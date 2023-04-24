@@ -1,3 +1,5 @@
+#include "utils.hpp"
+
 #include <thread/pool.hpp>
 #include <thread/wait_group.hpp>
 
@@ -47,7 +49,8 @@ TEST(WaitGroup, WaitSuccess) {
 
     NAsync::TWaitGroup wg{numTasks};
 
-    std::future<void> waitResult = std::async(&NAsync::TWaitGroup::BlockAndWait, &wg);
+    wg.Block();
+    std::future<void> waitResult = std::async(&NAsync::TWaitGroup::Wait, &wg);
 
     std::stack<std::future<int>> tasks;
     for (int i = 0; i < numTasks; ++i) {
@@ -75,3 +78,19 @@ TEST(WaitGroup, Terminate) {
     wg.Dec();
     EXPECT_DEATH(wg.Dec(), "Assertion failed");
 }
+
+TEST(WaitGroup, AddFail) {
+    NAsync::TWaitGroup wg {2};
+    std::future<void> fut = std::async(&NAsync::TWaitGroup::Wait, &wg);
+    wg.Block();
+    ASSERT_FALSE(NAsync::NPrivate::IsReady(fut));
+    ASSERT_FALSE(wg.Inc());
+    ASSERT_FALSE(wg.Finished());
+    wg.Dec();
+    wg.Dec();
+    ASSERT_TRUE(wg.Finished());
+    std::this_thread::sleep_for(std::chrono::microseconds(100));
+    ASSERT_TRUE(NAsync::NPrivate::IsReady(fut));
+    fut.get();
+}
+

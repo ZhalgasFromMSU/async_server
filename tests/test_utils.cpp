@@ -1,5 +1,4 @@
 #include <util/result.hpp>
-#include <util/queue.hpp>
 
 #include <gtest/gtest.h>
 
@@ -107,4 +106,3 @@ TEST(Errors, VerifyResult) {
     NAsync::TResult<int> res {std::error_code{1, std::system_category()}};
     EXPECT_DEATH(VERIFY_RESULT(res), res.Error().message());
 }
-

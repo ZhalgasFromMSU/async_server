@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <limits>
+#include <chrono>
 
 namespace NAsync {
 
@@ -15,9 +16,10 @@ namespace NAsync {
 
         bool Inc() noexcept;
         void Dec() noexcept;
-        void BlockAndWait() noexcept;
+        void Block() noexcept;
+        void Wait() noexcept;
 
-        inline bool Blocked() const noexcept {
+        inline bool Finished() noexcept {
             return Counter_ == NegZero_;
         }
 

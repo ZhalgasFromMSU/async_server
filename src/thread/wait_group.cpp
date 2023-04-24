@@ -1,7 +1,8 @@
 #include <thread/wait_group.hpp>
 #include <util/result.hpp>
 
-#include <mutex>
+#include <future>
+#include <iostream>
 
 namespace NAsync {
 
@@ -37,7 +38,7 @@ namespace NAsync {
         }
     }
 
-    void TWaitGroup::BlockAndWait() noexcept {
+    void TWaitGroup::Block() noexcept {
         int current = Counter_;
         while (true) {
             int newVal;
@@ -50,8 +51,10 @@ namespace NAsync {
                 break;
             }
         }
+    }
 
-        current = Counter_;
+    void TWaitGroup::Wait() noexcept {
+        int current = Counter_;
         while (Counter_ != NegZero_) {
             Counter_.wait(current);
             current = Counter_;

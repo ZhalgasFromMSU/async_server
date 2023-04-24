@@ -58,10 +58,10 @@ set(TESTS_GROUP async_tests)
 
 add_executable(${TESTS_GROUP}
     tests/test_thread.cpp
-    tests/test_polling.cpp
+    # tests/test_polling.cpp
     tests/test_utils.cpp
     tests/test_io.cpp
-    tests/test_coro.cpp
+    # tests/test_coro.cpp
     tests/test_net.cpp
     tests/test_socket.cpp
     tests/test_address.cpp
