@@ -1,31 +1,32 @@
 #include <iostream>
-#include <memory>
+#include <array>
 #include <atomic>
 
 
+void foo(const int& x) {
+    std::cerr << "c&\n";
+}
+
+void foo(int&& x) {
+    std::cerr << "&&\n";
+}
+
 template<typename T>
-struct TStruct {
-    T Val;
-    std::atomic<TStruct*> Next;
+struct A {
+
+    template<typename TVal>
+    void Foo(TVal&& t) {
+        foo(std::forward<T>(t));
+    }
 };
 
+
 int main() {
-    std::atomic<TStruct<int>*> a = new TStruct<int> {
-        .Val = 3,
-        .Next = nullptr,
-    };
+    A<int> a;
 
-    std::atomic<TStruct<int>*> b = new TStruct<int> {
-        .Val = 4,
-        .Next = nullptr,
-    };
-
-    auto copy = a.load();
-    while (!a->Next.compare_exchange_weak(nullptr, b)) {
-
-    }
-    std::cerr << (*a).Val << std::endl;
-    std::cerr << (*((*a).Next)).Val << std::endl;
+    int x;
+    a.Foo(x);
+    a.Foo(std::move(x));
 
     return 0;
 }

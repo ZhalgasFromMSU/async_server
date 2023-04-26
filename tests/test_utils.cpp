@@ -1,4 +1,5 @@
 #include <util/result.hpp>
+#include <util/queue.hpp>
 
 #include <gtest/gtest.h>
 
@@ -105,4 +106,16 @@ TEST(Errors, VerifyResult) {
     VERIFY_RESULT(NAsync::TResult<int>{});
     NAsync::TResult<int> res {std::error_code{1, std::system_category()}};
     EXPECT_DEATH(VERIFY_RESULT(res), res.Error().message());
+}
+
+TEST(Queue, PushPop) {
+    NAsync::TQueue<int, 2> q;
+    ASSERT_TRUE(q.Push(1));
+    ASSERT_TRUE(q.Push(2));
+    ASSERT_FALSE(q.Push(3));
+
+
+    ASSERT_EQ(*q.Pop(), 1);
+    ASSERT_EQ(*q.Pop(), 2);
+    ASSERT_EQ(q.Pop(), std::nullopt);
 }
