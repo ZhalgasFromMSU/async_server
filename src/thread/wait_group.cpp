@@ -65,4 +65,15 @@ namespace NAsync {
         }
     }
 
+    int TWaitGroup::Count() const noexcept {
+        int count = Counter_;
+        if (count >= 0) {
+            return count;
+        } else if (count == NegZero_) {
+            return 0;
+        } else {
+            return -count;
+        }
+    }
+
 } // namespace NAsync

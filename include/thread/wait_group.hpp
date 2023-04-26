@@ -19,16 +19,7 @@ namespace NAsync {
         void Block() noexcept;
         void Wait() noexcept;
 
-        inline int Count() const noexcept {
-            int count = Counter_;
-            if (count >= 0) {
-                return count;
-            } else if (count == NegZero_) {
-                return 0;
-            } else {
-                return -count;
-            }
-        }
+        int Count() const noexcept;
 
         inline bool Waited() const noexcept {
             return Counter_ == NegZero_;
