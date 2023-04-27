@@ -1,7 +1,11 @@
 #pragma once
 
+#include "result.hpp"
+
 #include <type_traits>
-#include <utility>
+#include <variant>
+#include <functional>
+#include <coroutine>
 
 namespace NAsync {
 
@@ -28,5 +32,21 @@ namespace NAsync {
 
     private:
         TFunc Func_;
+    };
+
+    class TJob : public std::variant<std::coroutine_handle<>,
+                                     std::function<void()>> {
+    public:
+        using TJob::variant::variant;
+
+        void Execute() {
+            if (auto handle = std::get_if<std::coroutine_handle<>>(this)) {
+                handle->resume();
+            } else if (auto handle = std::get_if<std::function<void()>>(this)) {
+                (*handle)();
+            } else {
+                VERIFY(false);
+            }
+        }
     };
 } // namespace NAsync

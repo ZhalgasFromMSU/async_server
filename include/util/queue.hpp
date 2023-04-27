@@ -43,18 +43,6 @@ namespace NAsync {
             return ret;
         }
 
-        // Head_ == Tail_ - there is no elements
-        // Head_ - 1 == Tail_ - queue is at full capacity (although location under Tail_ can be used for emplace)
-        size_t Size() const noexcept {
-            size_t curHead = Head_;
-            size_t curTail = Tail_;
-            if (curTail >= curHead) {
-                return curTail - curHead;
-            } else {
-                return BufSize - curHead + curTail;
-            }
-        }
-
     private:
         size_t MoveTail() {
             size_t curVal = Tail_;

@@ -12,20 +12,23 @@ namespace NAsync {
         }
     }
 
-    size_t TThreadPool::QueueSize() const {
-        return Wg_.Count();
-    }
-
     void TThreadPool::Start() noexcept {
         for (size_t i = 0; i < Threads_.capacity(); ++i) {
-            Threads_.emplace_back(&TThreadPool::WorkerLoop, this);
+            Threads_.emplace_back([this] {
+                while (!Wg_.Waited()) {
+                    std::optional<TJob> job = Jobs_.Pop();
+                    if (job != std::nullopt) {
+                        job->Execute();
+                        Wg_.Dec();
+                    }
+                }
+            });
         }
     }
 
     void TThreadPool::Finish() noexcept {
         Wg_.Block();
         Wg_.Wait();
-        JobsCV_.notify_all();
 
         for (auto& thread : Threads_) {
             if (thread.joinable()) {
@@ -34,33 +37,15 @@ namespace NAsync {
         }
     }
 
-    bool TThreadPool::EnqueJob(std::unique_ptr<ITask> task) noexcept {
+    bool TThreadPool::EnqueJob(TJob job) noexcept {
         if (!Wg_.Inc()) {
             return false;
         }
-        std::scoped_lock lock {QueueMutex_};
-        JobsQueue_.emplace(std::move(task));
-        JobsCV_.notify_one();
-        return true;
-    }
-
-    void TThreadPool::WorkerLoop() {
-        while (true) {
-            std::unique_lock lock {QueueMutex_};
-            JobsCV_.wait(lock, [this] {
-                return !JobsQueue_.empty() || Wg_.Waited();
-            });
-
-            if (Wg_.Waited()) {
-                return;
-            }
-
-            auto taskPtr = std::move(JobsQueue_.front());
-            JobsQueue_.pop();
-            lock.unlock();
-            taskPtr->Execute();
+        if (!Jobs_.Emplace(std::move(job))) {
             Wg_.Dec();
+            return false;
         }
+        return true;
     }
 
 } // namespace NAsync

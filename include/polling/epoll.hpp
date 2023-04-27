@@ -1,11 +1,10 @@
 #pragma once
 
-#include <io/io_object.hpp>
 #include <io/well_known_structs.hpp>
 #include <util/task.hpp>
+#include <thread/wait_group.hpp>
 
 #include <unordered_map>
-#include <memory>
 #include <thread>
 
 namespace NAsync {
@@ -27,19 +26,15 @@ namespace NAsync {
         void Stop() noexcept;
 
         // All callbacks are executed synchronously
-        std::error_code Watch(EMode mode, const TIoObject& io, std::unique_ptr<ITask> callback) noexcept;
-
-        template<CVoidToVoid TFunc>
-        std::error_code Watch(EMode mode, const TIoObject& io, TFunc&& callback) noexcept {
-            return Watch(mode, io, std::make_unique<TTask<TFunc>>(std::forward<TFunc>(callback)));
-        }
+        std::error_code Watch(EMode mode, const TIoObject& io, TJob callback) noexcept;
 
     private:
         TEventFd EventFd_;
-        std::unordered_map<int, std::unique_ptr<ITask>> Callbacks_; // <fd, callback>
 
         std::mutex Mutex_;
-        std::atomic<bool> Stopped_ = false;
+        std::unordered_map<int, TJob> Callbacks_; // <fd, callback>
+
+        TWaitGroup Wg_;
         std::thread Worker_;
     };
 

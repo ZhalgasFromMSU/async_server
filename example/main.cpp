@@ -3,14 +3,18 @@
 #include <atomic>
 
 
+template<typename T>
+struct A {
+    A(int, T);
+};
+
+struct B : A<const char*> {
+    using B::A::A;
+};
+
 
 int main() {
-    std::array<std::atomic<int>, 1000000> x;
-    for (auto& i : x) {
-        if (i != 0) {
-            std::cerr << "zdes\n";
-        }
-    }
+    B b{1, 2};
 
     return 0;
 }

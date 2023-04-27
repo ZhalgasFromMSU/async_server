@@ -1,9 +1,8 @@
 #include <polling/epoll.hpp>
 
-#include <mutex>
-
 #include <sys/epoll.h>
 #include <cstring>
+#include <system_error>
 
 namespace NAsync {
 
@@ -40,7 +39,7 @@ namespace NAsync {
     }
 
     TEpoll::~TEpoll() {
-        if (!Stopped_) {
+        if (!Wg_.Waited()) {
             Stop();
         }
     }
@@ -49,7 +48,7 @@ namespace NAsync {
         Worker_ = std::thread {[this] {
             static constexpr size_t bSize = 1024;
             epoll_event buffer[bSize];
-            while (!Stopped_) {
+            while (!Wg_.Blocked()) {
                 int numReady = epoll_wait(Fd(), buffer, bSize, -1 /* timeout */);
                 VERIFY_SYSCALL(numReady != -1);
 
@@ -57,31 +56,36 @@ namespace NAsync {
                 for (int i = 0; i < numReady; ++i) {
                     auto node = Callbacks_.extract(buffer[i].data.fd);
                     VERIFY(!node.empty());
-                    node.mapped()->Execute();
+                    node.mapped().Execute();
+                    Wg_.Dec();
                 }
             }
         }};
     }
 
     void TEpoll::Stop() noexcept {
-        Stopped_ = true;
+        Wg_.Block();
         EventFd_.Set();
         Worker_.join();
 
         std::scoped_lock lock{Mutex_};
         while (!Callbacks_.empty()) {
             auto node = Callbacks_.extract(Callbacks_.begin());
-            node.mapped()->Execute();
+            node.mapped().Execute();
+            Wg_.Dec();
         }
     }
 
-    std::error_code TEpoll::Watch(EMode mode, const TIoObject& io, std::unique_ptr<ITask> callback) noexcept {
-        std::scoped_lock lock{Mutex_};
-        if (Stopped_) {
+    std::error_code TEpoll::Watch(EMode mode, const TIoObject& io, TJob callback) noexcept {
+        if (!Wg_.Inc()) {
             return std::error_code{EBADF, std::system_category()};
         }
         Callbacks_[io.Fd()] = std::move(callback);
-        return AddFdToEpoll(Fd(), io.Fd(), mode);
+        std::error_code err = AddFdToEpoll(Fd(), io.Fd(), mode);
+        if (err) {
+            Wg_.Dec();
+        }
+        return err;
     }
 
 } // namespace NAsync

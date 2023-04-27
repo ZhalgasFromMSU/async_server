@@ -138,7 +138,6 @@ TEST(Queue, LongPush) {
     });
 
     std::this_thread::sleep_for(std::chrono::milliseconds(20)); // started emplacing
-    ASSERT_EQ(q.Size(), 1);
     ASSERT_EQ(q.Pop(), std::nullopt);
     future1.wait();
     ASSERT_TRUE(q.Pop());
