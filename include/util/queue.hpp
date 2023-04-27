@@ -22,7 +22,7 @@ namespace NAsync {
         // nil val val val val val nil nil nil
         //
         template<typename... TArgs>
-        bool Push(TArgs&&... args) { // put element to the end of a queue
+        bool Emplace(TArgs&&... args) { // put element to the end of a queue
             size_t place = MoveTail();
             if (place == BufSize) {
                 return false;

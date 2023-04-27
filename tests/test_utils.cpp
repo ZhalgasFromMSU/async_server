@@ -5,6 +5,7 @@
 
 #include <iterator>
 #include <unordered_map>
+#include <future>
 
 using namespace NAsync;
 
@@ -110,12 +111,35 @@ TEST(Errors, VerifyResult) {
 
 TEST(Queue, PushPop) {
     NAsync::TQueue<int, 2> q;
-    ASSERT_TRUE(q.Push(1));
-    ASSERT_TRUE(q.Push(2));
-    ASSERT_FALSE(q.Push(3));
+    ASSERT_TRUE(q.Emplace(1));
+    ASSERT_TRUE(q.Emplace(2));
+    ASSERT_FALSE(q.Emplace(3));
 
 
     ASSERT_EQ(*q.Pop(), 1);
     ASSERT_EQ(*q.Pop(), 2);
     ASSERT_EQ(q.Pop(), std::nullopt);
+}
+
+TEST(Queue, LongPush) {
+    struct TLongConstructor {
+        TLongConstructor() {
+
+        }
+
+        TLongConstructor(bool) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    };
+
+    NAsync::TQueue<TLongConstructor, 1> q;
+    auto future1 = std::async([&q] {
+        ASSERT_TRUE(q.Emplace(true));
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(20)); // started emplacing
+    ASSERT_EQ(q.Size(), 1);
+    ASSERT_EQ(q.Pop(), std::nullopt);
+    future1.wait();
+    ASSERT_TRUE(q.Pop());
 }
