@@ -3,30 +3,14 @@
 #include <atomic>
 
 
-void foo(const int& x) {
-    std::cerr << "c&\n";
-}
-
-void foo(int&& x) {
-    std::cerr << "&&\n";
-}
-
-template<typename T>
-struct A {
-
-    template<typename TVal>
-    void Foo(TVal&& t) {
-        foo(std::forward<T>(t));
-    }
-};
-
 
 int main() {
-    A<int> a;
-
-    int x;
-    a.Foo(x);
-    a.Foo(std::move(x));
+    std::array<std::atomic<int>, 1000000> x;
+    for (auto& i : x) {
+        if (i != 0) {
+            std::cerr << "zdes\n";
+        }
+    }
 
     return 0;
 }
