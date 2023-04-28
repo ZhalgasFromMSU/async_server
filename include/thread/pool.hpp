@@ -24,7 +24,8 @@ namespace NAsync {
         TWaitGroup Wg_;
         TQueue<TJob, 1024> Jobs_;
 
-        std::vector<std::thread> Threads_;
+        std::vector<std::jthread> Threads_;
+        std::atomic<size_t> TaskCount_ = 0; // to remove busy loops
     };
 
 } // namespace NAsync

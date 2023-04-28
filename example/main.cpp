@@ -5,7 +5,7 @@
 
 
 int main() {
-    std::atomic_flag flag;
+    std::atomic_unsigned_lock_free a = 3;
 
     return 0;
 }
