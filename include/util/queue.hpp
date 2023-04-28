@@ -23,7 +23,7 @@ namespace NAsync {
         //
         template<typename... TArgs>
         bool Emplace(TArgs&&... args) { // put element to the end of a queue
-            size_t place = MoveTail();
+            size_t place = TryMoveTail();
             if (place == BufSize) {
                 return false;
             }
@@ -33,7 +33,7 @@ namespace NAsync {
         }
 
         std::optional<T> Pop() { // pop element from the beginning of a queue
-            size_t place = MoveHead();
+            size_t place = TryMoveHead();
             if (place == BufSize) {
                 return std::nullopt;
             }
@@ -44,7 +44,7 @@ namespace NAsync {
         }
 
     private:
-        size_t MoveTail() {
+        size_t TryMoveTail() {
             size_t curVal = Tail_;
             while (true) {
                 size_t newVal = (curVal + 1) % BufSize;
@@ -57,7 +57,7 @@ namespace NAsync {
             }
         }
 
-        size_t MoveHead() {
+        size_t TryMoveHead() {
             size_t curVal = Head_;
             while (true) {
                 if (Tail_ == curVal || !ContainsValue_[curVal]) {
