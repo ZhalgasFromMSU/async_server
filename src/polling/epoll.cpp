@@ -1,5 +1,7 @@
 #include <polling/epoll.hpp>
 
+#include <mutex>
+
 #include <sys/epoll.h>
 #include <cstring>
 #include <system_error>
@@ -39,52 +41,49 @@ namespace NAsync {
     }
 
     TEpoll::~TEpoll() {
-        if (!Wg_.Waited()) {
+        if (!EventFd_.IsSet()) {
             Stop();
         }
     }
 
     void TEpoll::Start() noexcept {
-        Worker_ = std::thread {[this] {
+        Worker_ = std::jthread {[this] {
             static constexpr size_t bSize = 1024;
             epoll_event buffer[bSize];
-            while (!Wg_.Blocked()) {
+            while (!EventFd_.IsSet()) {
                 int numReady = epoll_wait(Fd(), buffer, bSize, -1 /* timeout */);
                 VERIFY_SYSCALL(numReady != -1);
 
-                std::scoped_lock lock{Mutex_};
+                std::scoped_lock lock{Mut_};
                 for (int i = 0; i < numReady; ++i) {
-                    auto node = Callbacks_.extract(buffer[i].data.fd);
+                    auto node = Cbs_.extract(buffer[i].data.fd);
                     VERIFY(!node.empty());
                     node.mapped().Execute();
-                    Wg_.Dec();
                 }
+            }
+
+            while (!Cbs_.empty()) {
+                auto node = Cbs_.extract(Cbs_.begin());
+                node.mapped().Execute();
             }
         }};
     }
 
     void TEpoll::Stop() noexcept {
-        Wg_.Block();
         EventFd_.Set();
-        Worker_.join();
-
-        std::scoped_lock lock{Mutex_};
-        while (!Callbacks_.empty()) {
-            auto node = Callbacks_.extract(Callbacks_.begin());
-            node.mapped().Execute();
-            Wg_.Dec();
-        }
     }
 
     std::error_code TEpoll::Watch(EMode mode, const TIoObject& io, TJob callback) noexcept {
-        if (!Wg_.Inc()) {
+        if (EventFd_.IsSet()) {
             return std::error_code{EBADF, std::system_category()};
         }
-        Callbacks_[io.Fd()] = std::move(callback);
+
+        std::scoped_lock lock{Mut_};
         std::error_code err = AddFdToEpoll(Fd(), io.Fd(), mode);
         if (err) {
-            Wg_.Dec();
+            return err;
         }
+        Cbs_.emplace(io.Fd(), std::move(callback));
         return err;
     }
 

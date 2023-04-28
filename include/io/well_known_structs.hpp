@@ -3,6 +3,8 @@
 #include <io/io_object.hpp>
 #include <util/result.hpp>
 
+#include <atomic>
+
 namespace NAsync {
 
     class TPipe {
@@ -33,14 +35,13 @@ namespace NAsync {
         TEventFd() noexcept;
 
         inline bool IsSet() const noexcept {
-            return IsSet_;
+            return IsSet_.test();
         }
 
         void Set() noexcept; // Make it readable (poll will return that fd is ready for reading)
-        void Reset() noexcept; // Nullify event fd to make it pollable
 
     private:
-        bool IsSet_ = false;
+        std::atomic_flag IsSet_;
     };
 
 } // namespace NAsync

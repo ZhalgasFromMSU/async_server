@@ -6,10 +6,22 @@
 
 namespace NAsync {
 
+    template<typename TFunc>
+    concept CVoidToVoid = std::is_same_v<void, std::invoke_result_t<TFunc>>;
+
     class TJob : public std::variant<std::coroutine_handle<>,
                                      std::function<void()>> {
     public:
-        using TJob::variant::variant;
+
+        template<std::derived_from<std::coroutine_handle<>> TCoroHandle>
+        TJob(TCoroHandle&& job)
+            : TJob::variant{std::in_place_type<std::coroutine_handle<>>, std::forward<TCoroHandle>(job)}
+        {}
+
+        template<CVoidToVoid TFunc>
+        TJob(TFunc&& job)
+            : TJob::variant(std::in_place_type<std::function<void()>>, std::forward<TFunc>(job))
+        {}
 
         void Execute() {
             if (auto handle = std::get_if<std::coroutine_handle<>>(this)) {

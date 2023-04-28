@@ -19,8 +19,8 @@ namespace NAsync {
                     std::optional<TJob> job = Jobs_.Pop();
                     if (job != std::nullopt) {
                         TaskCount_ -= 1;
-                        Wg_.Dec();
                         job->Execute();
+                        Wg_.Dec();
                     } else if (TaskCount_ == 0) {
                         TaskCount_.wait(0);
                     }

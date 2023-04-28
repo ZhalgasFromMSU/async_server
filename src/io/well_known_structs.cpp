@@ -29,14 +29,10 @@ namespace NAsync {
 
     void TEventFd::Set() noexcept {
         constexpr uint64_t numToWrite = 1;
-        IsSet_ = true;
+        if (IsSet_.test_and_set()) { // someone already set value
+            return;
+        }
         VERIFY_RESULT(Write(&numToWrite, sizeof(numToWrite)).await_resume()); // write to eventfd always returns 8 bytes, so no need to check retval
-    }
-
-    void TEventFd::Reset() noexcept {
-        uint64_t numToRead;
-        IsSet_ = false;
-        VERIFY_RESULT(Read(&numToRead, sizeof(numToRead)).await_resume()); // read from eventfd always returns 8 bytes
     }
 
 } // namespace NAsync

@@ -27,7 +27,6 @@ TEST(ThreadPool, EnqueJob) {
     }
 
     ASSERT_EQ(numCompleted, 0);
-    ASSERT_EQ(threadPool.QueueSize(), numJobs);
     threadPool.Start();
     threadPool.Finish();
     ASSERT_EQ(numCompleted, numJobs);

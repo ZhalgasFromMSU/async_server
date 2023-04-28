@@ -29,13 +29,12 @@ namespace NAsync {
         std::error_code Watch(EMode mode, const TIoObject& io, TJob callback) noexcept;
 
     private:
-        TEventFd EventFd_;
+        TEventFd EventFd_; // to stop epoll_wait
 
-        std::mutex Mutex_;
-        std::unordered_map<int, TJob> Callbacks_; // <fd, callback>
+        std::mutex Mut_;
+        std::unordered_map<int, TJob> Cbs_; // <fd, callback>
 
-        TWaitGroup Wg_;
-        std::thread Worker_;
+        std::jthread Worker_;
     };
 
 } // namespace NAsync
