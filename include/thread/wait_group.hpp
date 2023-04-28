@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <limits>
-#include <chrono>
 
 namespace NAsync {
 

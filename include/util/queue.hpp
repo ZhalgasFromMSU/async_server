@@ -32,7 +32,7 @@ namespace NAsync {
             return true;
         }
 
-        std::optional<T> Pop() { // pop element from top of the queue
+        std::optional<T> Pop() { // pop element from the beginning of a queue
             size_t place = MoveHead();
             if (place == BufSize) {
                 return std::nullopt;
