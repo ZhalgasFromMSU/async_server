@@ -10,6 +10,12 @@ namespace NAsync {
         if (!Wg_.Waited()) {
             Finish();
         }
+
+        for (auto& thread : Threads_) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
     }
 
     void TThreadPool::Start() noexcept {
@@ -29,12 +35,6 @@ namespace NAsync {
     void TThreadPool::Finish() noexcept {
         Wg_.Block();
         Wg_.Wait();
-
-        for (auto& thread : Threads_) {
-            if (thread.joinable()) {
-                thread.join();
-            }
-        }
     }
 
     bool TThreadPool::EnqueJob(TJob job) noexcept {
