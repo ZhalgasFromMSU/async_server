@@ -12,9 +12,7 @@ namespace NAsync {
         }
 
         for (auto& thread : Threads_) {
-            if (thread.joinable()) {
-                thread.join();
-            }
+            thread.join();
         }
     }
 
