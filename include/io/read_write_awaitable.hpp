@@ -9,8 +9,6 @@
 
 namespace NAsync {
 
-    class TIoObject;
-
     class TReadAwaitable: public TWithEpoll {
     public:
         inline TReadAwaitable(const TIoObject& ioObject, void* buf, int num, int flags = 0) noexcept
@@ -21,7 +19,7 @@ namespace NAsync {
         {}
 
         bool await_ready() noexcept;
-        void await_suspend(std::coroutine_handle<> handle) const noexcept;
+        bool await_suspend(std::coroutine_handle<> handle) const noexcept;
         TResult<int> await_resume() noexcept;
 
     private:
@@ -43,7 +41,7 @@ namespace NAsync {
         {}
 
         bool await_ready() noexcept;
-        void await_suspend(std::coroutine_handle<> handle) const noexcept;
+        bool await_suspend(std::coroutine_handle<> handle) const noexcept;
         TResult<int> await_resume() noexcept;
 
     private:

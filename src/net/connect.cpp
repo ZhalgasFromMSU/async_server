@@ -18,29 +18,23 @@ namespace NAsync {
         return true;
     }
 
-    void TConnectAwaitable::await_suspend(std::coroutine_handle<> handle) noexcept {
-        if (ThreadPool) {
-            Epoll->Watch(TEpoll::EMode::kWrite, Socket_, [this, handle] {
-                VERIFY(ThreadPool->EnqueJob(handle));
-            });
-        } else {
-            Epoll->Watch(TEpoll::EMode::kWrite, Socket_, handle);
-        }
+    bool TConnectAwaitable::await_suspend(std::coroutine_handle<> handle) noexcept {
+        return Suspend(TEpoll::EMode::kWrite, Socket_, handle);
     }
 
     std::error_code TConnectAwaitable::await_resume() noexcept {
         if (Error_) {
             return std::move(*Error_);
         }
-        int error;
-        socklen_t size = sizeof(error);
-        int status = getsockopt(Socket_.Fd(), SOL_SOCKET, SO_ERROR, &error, &size);
+        int acceptResult;
+        socklen_t size = sizeof(acceptResult);
+        int status = getsockopt(Socket_.Fd(), SOL_SOCKET, SO_ERROR, &acceptResult, &size);
         if (status == -1) {
             return std::error_code{errno, std::system_category()};
         }
 
-        if (error != 0) {
-            return std::error_code{error, std::system_category()};
+        if (acceptResult != 0) {
+            return std::error_code{acceptResult, std::system_category()};
         }
 
         return std::error_code{};

@@ -2,7 +2,6 @@
 
 #include <util/result.hpp>
 
-#include <string>
 #include <memory>
 
 struct in_addr;

@@ -8,11 +8,14 @@
 
 namespace NAsync {
 
-    // Socket address
     static constexpr uint16_t kAnyPort = 0;
+
+    // Socket address
     using TIPv4SocketAddress = std::pair<TIPv4Address, uint16_t>;  // <host, port>
     using TIPv6SocketAddress = std::pair<TIPv6Address, uint16_t>;  // <host, port>
-    using TSocketAddress = std::variant<TIPv4SocketAddress, TIPv6SocketAddress>;
+
+    using TSocketAddress = std::variant<TIPv4SocketAddress,
+                                        TIPv6SocketAddress>;
 
     // Forward declarations
     class TAcceptAwaitable;

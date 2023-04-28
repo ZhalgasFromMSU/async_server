@@ -18,14 +18,8 @@ namespace NAsync {
         return true;
     }
 
-    void TAcceptAwaitable::await_suspend(std::coroutine_handle<> handle) noexcept {
-        if (ThreadPool) {
-            Epoll->Watch(TEpoll::EMode::kRead, Acceptor_, [this, handle] {
-                VERIFY(ThreadPool->EnqueJob(handle));
-            });
-        } else {
-            Epoll->Watch(TEpoll::EMode::kRead, Acceptor_, handle);
-        }
+    bool TAcceptAwaitable::await_suspend(std::coroutine_handle<> handle) noexcept {
+        return Suspend(TEpoll::EMode::kRead, Acceptor_, handle);
     }
 
     TResult<TSocket> TAcceptAwaitable::await_resume() noexcept {

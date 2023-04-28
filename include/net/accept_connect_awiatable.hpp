@@ -15,7 +15,7 @@ namespace NAsync {
         {}
 
         bool await_ready() noexcept;
-        void await_suspend(std::coroutine_handle<> handle) noexcept;
+        bool await_suspend(std::coroutine_handle<> handle) noexcept;
         TResult<TSocket> await_resume() noexcept;
 
     private:
@@ -30,7 +30,7 @@ namespace NAsync {
         {}
 
         bool await_ready() noexcept;
-        void await_suspend(std::coroutine_handle<> handle) noexcept;
+        bool await_suspend(std::coroutine_handle<> handle) noexcept;
         std::error_code await_resume() noexcept;
 
     private:

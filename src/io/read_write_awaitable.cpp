@@ -1,3 +1,4 @@
+#include <asm-generic/errno.h>
 #include <io/read_write_awaitable.hpp>
 
 #include <sys/socket.h>
@@ -37,21 +38,15 @@ namespace NAsync {
     // TReadAwaitable
     bool TReadAwaitable::await_ready() noexcept {
         TResult<int> result = Read(IoObject_, Buf_, Num_, Flags_);
-        if (!result && (result.Error().value() == EWOULDBLOCK || result.Error().value() == EAGAIN)) {
+        if (!result && (result.Error().value() & (EWOULDBLOCK | EAGAIN))) {
             return false;
         }
         Result_ = std::move(result);
         return true;
     }
 
-    void TReadAwaitable::await_suspend(std::coroutine_handle<> handle) const noexcept {
-        if (ThreadPool) {
-            Epoll->Watch(TEpoll::EMode::kRead, IoObject_, [this, handle] {
-                VERIFY(ThreadPool->EnqueJob(handle));
-            });
-        } else {
-            Epoll->Watch(TEpoll::EMode::kRead, IoObject_, handle);
-        }
+    bool TReadAwaitable::await_suspend(std::coroutine_handle<> handle) const noexcept {
+        return Suspend(TEpoll::EMode::kRead, IoObject_, std::move(handle));
     }
 
     TResult<int> TReadAwaitable::await_resume() noexcept {
@@ -64,21 +59,15 @@ namespace NAsync {
     // TWriteAwaitable
     bool TWriteAwaitable::await_ready() noexcept {
         TResult<int> result = Write(IoObject_, Buf_, Num_, Flags_);
-        if (!result && (result.Error().value() == EWOULDBLOCK || result.Error().value() == EAGAIN)) {
+        if (!result && (result.Error().value() & (EWOULDBLOCK | EAGAIN))) {
             return false;
         }
         Result_ = std::move(result);
         return true;
     }
 
-    void TWriteAwaitable::await_suspend(std::coroutine_handle<> handle) const noexcept {
-        if (ThreadPool) {
-            Epoll->Watch(TEpoll::EMode::kWrite, IoObject_, [this, handle] {
-                VERIFY(ThreadPool->EnqueJob(handle));
-            });
-        } else {
-            Epoll->Watch(TEpoll::EMode::kWrite, IoObject_, handle);
-        }
+    bool TWriteAwaitable::await_suspend(std::coroutine_handle<> handle) const noexcept {
+        return Suspend(TEpoll::EMode::kWrite, IoObject_, std::move(handle));
     }
 
     TResult<int> TWriteAwaitable::await_resume() noexcept {

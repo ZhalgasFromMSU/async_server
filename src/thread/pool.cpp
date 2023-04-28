@@ -17,7 +17,7 @@ namespace NAsync {
             Threads_.emplace_back([this] {
                 while (!Wg_.Waited()) {
                     std::optional<TJob> job = Jobs_.Pop();
-                    if (job != std::nullopt) {
+                    if (job) {
                         TaskCount_ -= 1;
                         job->Execute();
                         Wg_.Dec();

@@ -9,7 +9,7 @@ namespace NAsync {
 
     class TPipe {
     public:
-        static TResult<TPipe> Create() noexcept;
+        TPipe() noexcept;
 
         inline const TIoObject& ReadEnd() const noexcept {
             return ReadEnd_;
@@ -20,11 +20,6 @@ namespace NAsync {
         }
 
     private:
-        TPipe(int readFd, int writeFd) noexcept
-            : WriteEnd_{writeFd}
-            , ReadEnd_{readFd}
-        {}
-
         TIoObject WriteEnd_;
         TIoObject ReadEnd_;
     };

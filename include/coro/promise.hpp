@@ -27,11 +27,11 @@ namespace NAsync {
 
         template<std::derived_from<TWithEpoll> TIoAwaitable>
         TIoAwaitable&& await_transform(TIoAwaitable&& awaitable) noexcept {
-            if (!awaitable.Epoll) {
-                awaitable.Epoll = Epoll;
+            if (!awaitable.HasEpoll()) {
+                awaitable.SetEpoll(Epoll);
             }
-            if (!awaitable.ThreadPool) {
-                awaitable.ThreadPool = ThreadPool;
+            if (!awaitable.HasThreadPool()) {
+                awaitable.SetThreadPool(ThreadPool);
             }
             return std::forward<TIoAwaitable>(awaitable);
         }

@@ -5,6 +5,7 @@
 #include <util/result.hpp>
 
 #include <coroutine>
+#include <future>
 
 namespace NAsync {
 

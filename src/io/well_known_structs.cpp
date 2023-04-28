@@ -13,13 +13,11 @@
 namespace NAsync {
 
     // TPipe
-    TResult<TPipe> TPipe::Create() noexcept {
+    TPipe::TPipe() noexcept {
         int pipeFds[2];
-        int status = pipe2(pipeFds, O_NONBLOCK);
-        if (status == -1) {
-            return std::error_code{errno, std::system_category()};
-        }
-        return TPipe(pipeFds[0], pipeFds[1]);
+        VERIFY_SYSCALL(pipe2(pipeFds, O_NONBLOCK) != -1);
+        ReadEnd_ = TIoObject(pipeFds[0]);
+        WriteEnd_ = TIoObject(pipeFds[1]);
     }
 
     // TEventFd

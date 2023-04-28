@@ -2,7 +2,6 @@
 #include <util/result.hpp>
 
 #include <future>
-#include <iostream>
 
 namespace NAsync {
 
