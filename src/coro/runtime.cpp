@@ -26,11 +26,11 @@ namespace NAsync {
         }
     }
 
-    void TRuntime::Execute(TJob job) noexcept {
+    void TRuntime::Execute(std::coroutine_handle<> handle) noexcept {
         if (Tp_) {
-            VERIFY(Tp_->EnqueJob(std::move(job)));
+            VERIFY(Tp_->EnqueJob(handle));
         } else {
-            job.Execute();
+            handle.resume();
         }
     }
 

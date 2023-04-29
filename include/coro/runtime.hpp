@@ -13,8 +13,8 @@ namespace NAsync {
         void Start() noexcept;
         void Stop() noexcept;
 
-        void Execute(TJob job) noexcept;
-        bool Schedule(TEpoll::EMode mode, const TIoObject& io, std::coroutine_handle<>) noexcept;
+        void Execute(std::coroutine_handle<> handle) noexcept;
+        bool Schedule(TEpoll::EMode mode, const TIoObject& io, std::coroutine_handle<> handle) noexcept;
 
     private:
         std::optional<TThreadPool> Tp_;

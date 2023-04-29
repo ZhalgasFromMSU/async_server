@@ -14,6 +14,9 @@ namespace NAsync {
 
     template<typename T>
     std::suspend_always TPromiseBase<T>::final_suspend() noexcept {
+        if (Continuation_) {
+            Continuation_.resume();
+        }
         return {};
     }
 
