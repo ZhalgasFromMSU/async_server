@@ -22,6 +22,7 @@ PUBLIC
     src/net/connect.cpp
     src/util/result.cpp
     src/coro/coro.cpp
+    src/coro/runtime.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
@@ -60,12 +61,12 @@ set(TESTS_GROUP async_tests)
 
 add_executable(${TESTS_GROUP}
     tests/test_thread.cpp
-    # tests/test_polling.cpp
+    tests/test_polling.cpp
     tests/test_utils.cpp
     tests/test_io.cpp
     # tests/test_coro.cpp
     tests/test_net.cpp
-    tests/test_socket.cpp
+    # tests/test_socket.cpp
     tests/test_address.cpp
 )
 

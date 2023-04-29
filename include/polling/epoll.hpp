@@ -18,18 +18,18 @@ namespace NAsync {
             kWrite,
         };
 
-        // static TResult<std::shared_ptr<TEpoll>> Create() noexcept;
         TEpoll() noexcept;
         ~TEpoll();
 
         void Start() noexcept;
-        void Stop() noexcept;
+        void Finish() noexcept;
 
         // All callbacks are executed synchronously
         std::error_code Watch(EMode mode, const TIoObject& io, TJob callback) noexcept;
 
     private:
         TEventFd EventFd_; // to stop epoll_wait
+        std::atomic_flag Stopped_;
 
         std::mutex Mut_;
         std::unordered_map<int, TJob> Cbs_; // <fd, callback>

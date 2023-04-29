@@ -3,9 +3,16 @@
 #include <atomic>
 
 
+void foo() {
+
+}
+
+void goo() {
+    return foo();
+}
+
 
 int main() {
-    std::atomic_unsigned_lock_free a = 3;
-
+    goo();
     return 0;
 }

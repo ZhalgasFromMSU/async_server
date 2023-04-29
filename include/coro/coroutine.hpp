@@ -1,3 +1,4 @@
 #pragma once
 
-#include <coro/promise.hpp>
+#include "corofuture-inl.hpp"
+#include "promise-inl.hpp"

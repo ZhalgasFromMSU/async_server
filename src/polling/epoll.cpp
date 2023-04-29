@@ -1,3 +1,4 @@
+#include <asm-generic/errno-base.h>
 #include <polling/epoll.hpp>
 
 #include <mutex>
@@ -25,11 +26,15 @@ namespace NAsync {
             }
 
             event.events |= EPOLLET | EPOLLONESHOT;
-            int status = epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event);
-            if (status == -1) {
-                return std::error_code{errno, std::system_category()};
+            std::error_code err;
+            if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event) == -1) {
+                if (errno != EEXIST) {
+                    err = std::error_code{errno, std::system_category()};
+                } else if (epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &event) == -1) {
+                    err = std::error_code{errno, std::system_category()};
+                }
             }
-            return std::error_code{};
+            return err;
         }
     } // namespace
 
@@ -42,7 +47,7 @@ namespace NAsync {
 
     TEpoll::~TEpoll() {
         if (!EventFd_.IsSet()) {
-            Stop();
+            Finish();
         }
     }
 
@@ -66,11 +71,14 @@ namespace NAsync {
                 auto node = Cbs_.extract(Cbs_.begin());
                 node.mapped().Execute();
             }
+            Stopped_.test_and_set();
+            Stopped_.notify_all();
         }};
     }
 
-    void TEpoll::Stop() noexcept {
+    void TEpoll::Finish() noexcept {
         EventFd_.Set();
+        Stopped_.wait(false);
     }
 
     std::error_code TEpoll::Watch(EMode mode, const TIoObject& io, TJob callback) noexcept {

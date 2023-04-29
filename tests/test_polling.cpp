@@ -21,12 +21,16 @@ using namespace NAsync;
 */
 
 struct Epoll: testing::Test {
+    Epoll() {
+        epoll.Start();
+    }
+
     TEpoll epoll;
 };
 
 TEST_F(Epoll, StartAndShutdown) {
-    auto pipe = TPipe::Create();
-    epoll.Watch(TEpoll::EMode::kRead, pipe->ReadEnd(), {});
+    TPipe pipe;
+    epoll.Watch(TEpoll::EMode::kRead, pipe.ReadEnd(), []{});
 }
 
 TEST_F(Epoll, Eventfd) {
@@ -40,67 +44,68 @@ TEST_F(Epoll, Eventfd) {
     });
 
     eventfd.Set();
-    wg.BlockAndWait();
+    wg.Block();
+    wg.Wait();
 }
 
 TEST_F(Epoll, AddingOneFd) {
-    auto pipe = TPipe::Create();
+    TPipe pipe;
 
     const char input[] = "1234";
     constexpr int size = sizeof(input);
     char output[size];
     memset(output, 0, size);
 
-    auto readResult = pipe->ReadEnd().Read(output, size).await_resume();
+    auto readResult = pipe.ReadEnd().Read(output, size).await_resume();
     // check that can't read right now
     ASSERT_EQ(readResult.Error(), std::error_code(EAGAIN, std::system_category()));
 
     TWaitGroup wg;
     wg.Inc();
-    VERIFY_EC(epoll.Watch(TEpoll::EMode::kRead, pipe->ReadEnd(), [&] {
-        ASSERT_EQ(*pipe->ReadEnd().Read(output, size).await_resume(), size);
+    VERIFY_EC(epoll.Watch(TEpoll::EMode::kRead, pipe.ReadEnd(), [&] {
+        ASSERT_EQ(*pipe.ReadEnd().Read(output, size).await_resume(), size);
         wg.Dec();
     }));
     ASSERT_EQ(strncmp(output, "\0\0\0\0", size), 0);
-    ASSERT_EQ(*pipe->WriteEnd().Write(input, size).await_resume(), size);
-    wg.BlockAndWait();
+    ASSERT_EQ(*pipe.WriteEnd().Write(input, size).await_resume(), size);
+    wg.Block();
+    wg.Wait();
     ASSERT_EQ(strcmp(input, output), 0);
 }
 
 TEST_F(Epoll, EventRemovedFromWatchlist) {
-    TEventFd eventfd;
+    TPipe pipe;
 
     TWaitGroup wg;
     wg.Inc();
-    epoll.Watch(TEpoll::EMode::kRead, eventfd, [&wg, &eventfd] {
-        eventfd.Reset();
+    epoll.Watch(TEpoll::EMode::kRead, pipe.ReadEnd(), [&wg] {
         wg.Dec();
     });
 
-    eventfd.Set();
-    wg.BlockAndWait();
-    ASSERT_FALSE(eventfd.IsSet());
-    eventfd.Set(); // Calling callback second time will call std::terminate, because TWaitGroup counter cannot go below 0;
+    pipe.WriteEnd().Write("123", 3).await_resume();
+    wg.Block();
+    wg.Wait();
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); // for epoll to have time to wake up
+    VERIFY_EC(epoll.Watch(TEpoll::EMode::kRead, pipe.ReadEnd(), [] {}));
+
 }
 
 TEST_F(Epoll, MultipleFds) {
     int numEvents = 10;
     std::vector<TEventFd> eventFds(numEvents);
 
-    TWaitGroup wg;
-    std::atomic<int> value;
+    std::atomic<int> value = 10;
     for (int i = 0; i < numEvents; ++i) {
-        epoll.Watch(TEpoll::EMode::kRead, eventFds[i], [&value, &wg, i] {
+        epoll.Watch(TEpoll::EMode::kRead, eventFds[i], [&value, i] {
             value = i;
-            wg.Dec();
+            value.notify_one();
         });
     }
 
     for (int i = numEvents - 1; i >= 0; --i) {
-        wg.Inc();
+        int cur = value;
         eventFds[i].Set();
-        wg.BlockAndWait();
+        value.wait(cur);
         ASSERT_EQ(value, i);
     }
 }
@@ -134,7 +139,8 @@ TEST_F(Epoll, MultipleFdsAsync) {
                 });
                 std::this_thread::sleep_for(std::chrono::milliseconds(randomSleepIntervalsMs[i - 1]));
                 eventfd.Set();
-                wg.BlockAndWait();
+                wg.Block();
+                wg.Wait();
             }
         );
     }
