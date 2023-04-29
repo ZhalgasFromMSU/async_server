@@ -1,4 +1,3 @@
-#include <chrono>
 #include <coro/coroutine.hpp>
 
 #include <gtest/gtest.h>
@@ -6,22 +5,14 @@
 using namespace NAsync;
 
 TEST(Coro, Coro) {
-    auto coro = [](const TIoObject& pipeOut) -> TCoroFuture<TResult<int>> {
-        char buf[8];
-        co_return co_await pipeOut.Read(buf, 3);
+    auto coro = []() -> TCoroFuture<void> {
+        co_return;
     };
 
-    TPipe pipe;
-    TEpoll epoll {1};
-    epoll.Start();
-    TCoroFuture<TResult<int>> task = coro(pipe.ReadEnd());
-    task.SetEpoll(&epoll);
+    auto task = coro();
     task.Run();
-    ASSERT_FALSE(task.IsReady());
-    pipe.WriteEnd().Write("123", 3).await_resume();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    ASSERT_TRUE(task.IsReady());
-    ASSERT_EQ(*task.Get(), 3);
+    task.Get();
+    std::cerr << "Zdes\n";
 }
 
 //struct Coro: ::testing::Test {

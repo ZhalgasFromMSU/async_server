@@ -1,8 +1,16 @@
 #include <iostream>
 #include <coroutine>
 
+struct Obj {
+    ~Obj() {
+
+        std::cerr << "123" << std::endl;
+    }
+};
+
+
 struct promise {
-    std::suspend_always initial_suspend() noexcept {
+    std::suspend_never initial_suspend() noexcept {
         std::cerr << "is\n";
         x += 1;
         return {};
@@ -26,6 +34,7 @@ struct promise {
     }
 
     int x = 1;
+    Obj obj;
 };
 
 template<>
@@ -40,9 +49,10 @@ std::coroutine_handle<> foo() {
 int main() {
     auto handle = foo();
     std::cerr << "1\n";
-    handle();
+    // handle();
     std::cerr << "2\n";
-    handle();
+    handle.destroy();
+    // handle();
     //handle();
     //std::cerr << "3\n";
     //handle();

@@ -2,6 +2,7 @@
 
 #include "corofuture.hpp"
 #include "promise.hpp"
+#include <iostream>
 
 namespace NAsync {
 
@@ -24,7 +25,7 @@ namespace NAsync {
     auto TCoroFuture<T>::Get() noexcept {
         struct TDeferred {
             ~TDeferred() {
-                std::coroutine_handle<TPromise<T>>::from_promise(Promise).resume();
+                std::coroutine_handle<TPromise<T>>::from_promise(Promise).destroy();
             }
 
             TPromise<T>& Promise;
