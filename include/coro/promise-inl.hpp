@@ -28,8 +28,8 @@ namespace NAsync {
     template<typename T>
     template<std::derived_from<TWithEpoll> TIoAwaitable>
     TIoAwaitable&& TPromiseBase<T>::await_transform(TIoAwaitable&& awaitable) noexcept {
-        if (!awaitable.HasRuntime()) {
-            awaitable.SetRuntime(Runtime);
+        if (!awaitable.HasEpoll()) {
+            awaitable.SetEpoll(Epoll);
         }
         return std::forward<TIoAwaitable>(awaitable);
     }
@@ -38,8 +38,8 @@ namespace NAsync {
     template<typename TSubFuture>
         requires (is_coro_future<TSubFuture>::value)
     TSubFuture&& TPromiseBase<T>::await_transform(TSubFuture&& subCoro) noexcept {
-        if (!subCoro.HasRuntime()) {
-            subCoro.SetRuntime(Runtime);
+        if (!subCoro.HasEpoll()) {
+            subCoro.SetEpoll(Epoll);
         }
         return std::forward<TSubFuture>(subCoro);
     }

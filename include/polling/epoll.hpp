@@ -1,11 +1,7 @@
 #pragma once
 
 #include <io/well_known_structs.hpp>
-#include <util/task.hpp>
-#include <thread/wait_group.hpp>
-
-#include <unordered_map>
-#include <thread>
+#include <thread/pool.hpp>
 
 namespace NAsync {
 
@@ -18,7 +14,7 @@ namespace NAsync {
             kWrite,
         };
 
-        TEpoll() noexcept;
+        TEpoll(size_t additionalPoolSize = 0) noexcept; // if set, callbacks are executed on another thread pool
         ~TEpoll();
 
         void Start() noexcept;
@@ -35,6 +31,7 @@ namespace NAsync {
         std::unordered_map<int, TJob> Cbs_; // <fd, callback>
 
         std::jthread Worker_;
+        std::optional<TThreadPool> CbsPool_; // callbacks are executed here
     };
 
 } // namespace NAsync

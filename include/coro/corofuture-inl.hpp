@@ -7,9 +7,7 @@ namespace NAsync {
 
     template<typename T>
     void TCoroFuture<T>::Run() noexcept {
-        Promise_.Runtime->Execute(
-            std::coroutine_handle<TPromise<T>>::from_promise(Promise_)
-        );
+        std::coroutine_handle<TPromise<T>>::from_promise(Promise_).resume();
     }
 
     template<typename T>
@@ -26,9 +24,7 @@ namespace NAsync {
     auto TCoroFuture<T>::Get() noexcept {
         struct TDeferred {
             ~TDeferred() {
-                Promise.Runtime->Execute(
-                    std::coroutine_handle<TPromise<T>>::from_promise(Promise)
-                );
+                std::coroutine_handle<TPromise<T>>::from_promise(Promise).resume();
             }
 
             TPromise<T>& Promise;
@@ -45,13 +41,13 @@ namespace NAsync {
     }
 
     template<typename T>
-    bool TCoroFuture<T>::HasRuntime() const noexcept {
-        return Promise_.Runtime != nullptr;
+    bool TCoroFuture<T>::HasEpoll() const noexcept {
+        return Promise_.Epoll != nullptr;
     }
 
     template<typename T>
-    void TCoroFuture<T>::SetRuntime(TRuntime* runtime) noexcept {
-        Promise_.Runtime = runtime;
+    void TCoroFuture<T>::SetEpoll(TEpoll* epoll) noexcept {
+        Promise_.Epoll = epoll;
     }
 
     template<typename T>

@@ -3,9 +3,6 @@
 #include "address/ip.hpp"
 #include <io/io_object.hpp>
 
-#include <variant>
-#include <optional>
-
 namespace NAsync {
 
     static constexpr uint16_t kAnyPort = 0;
@@ -17,11 +14,9 @@ namespace NAsync {
     using TSocketAddress = std::variant<TIPv4SocketAddress,
                                         TIPv6SocketAddress>;
 
-    // Forward declarations
     class TAcceptAwaitable;
     class TConnectAwaitable;
 
-    // TListeningSocket
     class TListeningSocket : public TIoObject {
     public:
         static TResult<TListeningSocket> Create(TSocketAddress address, int queueLen = 10) noexcept;
@@ -41,7 +36,6 @@ namespace NAsync {
         TSocketAddress Address_;
     };
 
-    // TSocket
     class TSocket : public TIoObject {
     public:
         template<std::derived_from<IAddress> T>
@@ -66,6 +60,37 @@ namespace NAsync {
         {}
 
         std::optional<TSocketAddress> Remote_; // udp sockets may lack remote address
+    };
+
+    class TAcceptAwaitable: public TWithEpoll {
+    public:
+        explicit TAcceptAwaitable(const TListeningSocket& acceptor) noexcept
+            : Acceptor_{acceptor}
+        {}
+
+        bool await_ready() noexcept;
+        bool await_suspend(std::coroutine_handle<> handle) noexcept;
+        TResult<TSocket> await_resume() noexcept;
+
+    private:
+        const TListeningSocket& Acceptor_;
+        std::optional<TResult<TSocket>> Socket_;
+    };
+
+    class TConnectAwaitable: public TWithEpoll {
+    public:
+        explicit TConnectAwaitable(const TSocket& socket) noexcept
+            : Socket_{socket}
+        {}
+
+        bool await_ready() noexcept;
+        bool await_suspend(std::coroutine_handle<> handle) noexcept;
+        std::error_code await_resume() noexcept;
+
+    private:
+        const TSocket& Socket_;
+
+        std::optional<std::error_code> Error_;
     };
 
 } // namespace NAsync

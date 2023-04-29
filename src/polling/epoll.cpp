@@ -1,4 +1,3 @@
-#include <asm-generic/errno-base.h>
 #include <polling/epoll.hpp>
 
 #include <mutex>
@@ -39,10 +38,13 @@ namespace NAsync {
     } // namespace
 
     // TEpoll
-    TEpoll::TEpoll() noexcept
+    TEpoll::TEpoll(size_t additionalPoolSize) noexcept
         : TIoObject{epoll_create1(0)}
     {
         VERIFY_EC(Watch(TEpoll::EMode::kRead, EventFd_, []{}));
+        if (additionalPoolSize) {
+            CbsPool_.emplace(additionalPoolSize);
+        }
     }
 
     TEpoll::~TEpoll() {
@@ -52,6 +54,10 @@ namespace NAsync {
     }
 
     void TEpoll::Start() noexcept {
+        if (CbsPool_) {
+            CbsPool_->Start();
+        }
+
         Worker_ = std::jthread {[this] {
             static constexpr size_t bSize = 1024;
             epoll_event buffer[bSize];
@@ -63,13 +69,21 @@ namespace NAsync {
                 for (int i = 0; i < numReady; ++i) {
                     auto node = Cbs_.extract(buffer[i].data.fd);
                     VERIFY(!node.empty());
-                    node.mapped().Execute();
+                    if (CbsPool_) {
+                        VERIFY(CbsPool_->EnqueJob(std::move(node.mapped())));
+                    } else {
+                        node.mapped().Execute();
+                    }
                 }
             }
 
             while (!Cbs_.empty()) {
                 auto node = Cbs_.extract(Cbs_.begin());
-                node.mapped().Execute();
+                if (CbsPool_) {
+                    VERIFY(CbsPool_->EnqueJob(std::move(node.mapped())));
+                } else {
+                    node.mapped().Execute();
+                }
             }
             Stopped_.test_and_set();
             Stopped_.notify_all();
@@ -79,6 +93,9 @@ namespace NAsync {
     void TEpoll::Finish() noexcept {
         EventFd_.Set();
         Stopped_.wait(false);
+        if (CbsPool_) {
+            CbsPool_->Finish();
+        }
     }
 
     std::error_code TEpoll::Watch(EMode mode, const TIoObject& io, TJob callback) noexcept {

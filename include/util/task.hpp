@@ -18,7 +18,7 @@ namespace NAsync {
             : TJob::variant{std::in_place_type<std::coroutine_handle<>>, std::forward<TCoroHandle>(job)}
         {}
 
-        template<CVoidToVoid TFunc>
+        template<typename TFunc>
         TJob(TFunc&& job)
             : TJob::variant(std::in_place_type<std::function<void()>>, std::forward<TFunc>(job))
         {}

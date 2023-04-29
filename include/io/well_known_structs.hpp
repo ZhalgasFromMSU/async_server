@@ -1,7 +1,6 @@
 #pragma once
 
 #include <io/io_object.hpp>
-#include <util/result.hpp>
 
 #include <atomic>
 

@@ -1,5 +1,4 @@
 #include <io/well_known_structs.hpp>
-#include <io/read_write_awaitable.hpp>
 
 #include <sys/eventfd.h>
 #include <fcntl.h>

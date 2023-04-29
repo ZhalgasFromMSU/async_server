@@ -28,7 +28,7 @@ namespace NAsync {
         TSubFuture&& await_transform(TSubFuture&& subCoro) noexcept;
 
         // Members variables
-        TRuntime* Runtime = nullptr;
+        TEpoll* Epoll = nullptr;
         std::atomic_flag Ready;
         std::coroutine_handle<> Continuation_;
     };

@@ -1,6 +1,5 @@
 #include <chrono>
 #include <coro/coroutine.hpp>
-#include <io/read_write_awaitable.hpp>
 
 #include <gtest/gtest.h>
 
@@ -13,10 +12,10 @@ TEST(Coro, Coro) {
     };
 
     TPipe pipe;
-    TRuntime runtime {1};
-    runtime.Start();
+    TEpoll epoll {1};
+    epoll.Start();
     TCoroFuture<TResult<int>> task = coro(pipe.ReadEnd());
-    task.SetRuntime(&runtime);
+    task.SetEpoll(&epoll);
     task.Run();
     ASSERT_FALSE(task.IsReady());
     pipe.WriteEnd().Write("123", 3).await_resume();

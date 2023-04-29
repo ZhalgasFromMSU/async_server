@@ -1,7 +1,5 @@
-#include <thread/wait_group.hpp>
 #include <polling/epoll.hpp>
 #include <io/well_known_structs.hpp>
-#include <io/read_write_awaitable.hpp>
 
 #include <gtest/gtest.h>
 

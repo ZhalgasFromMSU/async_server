@@ -13,16 +13,11 @@ PUBLIC
     src/thread/pool.cpp
     src/polling/epoll.cpp
     src/io/io_object.cpp
-    src/io/io_awaitable_base.cpp
-    src/io/read_write_awaitable.cpp
     src/io/well_known_structs.cpp
     src/net/address/ip.cpp
     src/net/socket.cpp
-    src/net/accept.cpp
-    src/net/connect.cpp
     src/util/result.cpp
     src/coro/coro.cpp
-    src/coro/runtime.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)

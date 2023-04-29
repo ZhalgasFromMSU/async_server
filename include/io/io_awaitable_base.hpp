@@ -1,23 +1,21 @@
 #pragma once
 
-#include <coro/runtime.hpp>
-
 namespace NAsync {
+
+    class TEpoll;
 
     class TWithEpoll {
     public:
-        inline bool HasRuntime() {
-            return Runtime_ != nullptr;
+        inline bool HasEpoll() {
+            return Epoll_ != nullptr;
         }
 
-        inline void SetRuntime(TRuntime* runtime) {
-            Runtime_ = runtime;
+        inline void SetEpoll(TEpoll* epoll) {
+            Epoll_ = epoll;
         }
 
-        bool Suspend(TEpoll::EMode mode, const TIoObject& io, std::coroutine_handle<> handle) const;
-
-    private:
-        TRuntime* Runtime_ = nullptr;
+    protected:
+        TEpoll* Epoll_ = nullptr;
     };
 
 } // namespace NAsync
