@@ -30,6 +30,7 @@ TEST_F(Coro, Coro) {
     task.Wait();
     TResult<int> res = task.Get();
     ASSERT_TRUE(res) << res.Error().message();
+    ASSERT_EQ(*res, 4);
 }
 
 //struct Coro: ::testing::Test {
