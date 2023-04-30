@@ -3,59 +3,53 @@
 
 struct Obj {
     ~Obj() {
-
         std::cerr << "123" << std::endl;
-    }
-};
-
-
-struct promise {
-    std::suspend_never initial_suspend() noexcept {
-        std::cerr << "is\n";
-        x += 1;
-        return {};
-    }
-
-    std::suspend_always final_suspend() noexcept {
-        std::cerr << "fs " << x << std::endl;
-        return {};
-    }
-
-    void unhandled_exception() {
-        throw;
-    }
-
-    std::coroutine_handle<> get_return_object() {
-        x += 1;
-        return std::coroutine_handle<promise>::from_promise(*this);
-    }
-
-    void return_void() {
     }
 
     int x = 1;
-    Obj obj;
 };
 
-template<>
-struct std::coroutine_traits<std::coroutine_handle<>> {
-    using promise_type = promise;
+
+struct coro {
+    struct promise_type {
+        std::suspend_never initial_suspend() noexcept {
+            return {};
+        }
+    
+        std::suspend_always final_suspend() noexcept {
+            return {};
+        }
+    
+        void unhandled_exception() {
+            throw;
+        }
+    
+        coro get_return_object() {
+            return coro{
+                .handle = std::coroutine_handle<promise_type>::from_promise(*this),
+                .obj = obj
+            };
+        }
+    
+        void return_void() {
+        }
+    
+        Obj obj;
+    };
+
+    std::coroutine_handle<> handle;
+    Obj& obj;
 };
 
-std::coroutine_handle<> foo() {
+coro foo() {
     co_return;
 }
 
 int main() {
-    auto handle = foo();
-    std::cerr << "1\n";
-    // handle();
-    std::cerr << "2\n";
-    handle.destroy();
-    // handle();
-    //handle();
-    //std::cerr << "3\n";
-    //handle();
-    //std::cerr << "4\n";
+    auto coro = foo();
+    std::cerr << coro.obj.x << std::endl;
+    
+    coro.handle.destroy();
+    // std::cerr << coro.obj.x << std::endl;
     return 0;
 }

@@ -4,15 +4,32 @@
 
 using namespace NAsync;
 
-TEST(Coro, Coro) {
-    auto coro = []() -> TCoroFuture<void> {
-        co_return;
+
+struct Coro : testing::Test {
+    TEpoll Epoll;
+
+    Coro() {
+        Epoll.Start();
+    }
+};
+
+
+TEST_F(Coro, Coro) {
+    auto coro = [](const TIoObject& pipeRead) -> TCoroFuture<TResult<int>> {
+        char buf[4];
+        co_return co_await pipeRead.Read(buf, 4);
     };
 
-    auto task = coro();
+    TPipe pipe;
+    auto task = coro(pipe.ReadEnd());
+    task.SetEpoll(&Epoll);
     task.Run();
-    task.Get();
-    std::cerr << "Zdes\n";
+
+    ASSERT_FALSE(task.IsReady());
+    pipe.WriteEnd().Write("1234", 4).await_resume();
+    task.Wait();
+    TResult<int> res = task.Get();
+    ASSERT_TRUE(res) << res.Error().message();
 }
 
 //struct Coro: ::testing::Test {

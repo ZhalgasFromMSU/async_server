@@ -30,7 +30,7 @@ namespace NAsync {
         // Members variables
         TEpoll* Epoll = nullptr;
         std::atomic_flag Ready;
-        std::coroutine_handle<> Continuation_;
+        std::coroutine_handle<> Continuation;
     };
 
     template<typename T>

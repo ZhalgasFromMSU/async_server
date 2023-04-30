@@ -58,7 +58,7 @@ namespace NAsync {
 
     template<typename T>
     void TCoroFuture<T>::await_suspend(std::coroutine_handle<> handle) noexcept {
-        Promise_.Continuation_ = handle;
+        Promise_.Continuation = handle;
     }
 
     template<typename T>
