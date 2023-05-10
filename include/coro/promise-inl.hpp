@@ -4,7 +4,6 @@
 #include "promise.hpp"
 
 #include <coroutine>
-#include <iostream>
 
 namespace NAsync {
 
@@ -31,6 +30,7 @@ namespace NAsync {
     template<std::derived_from<TWithEpoll> TIoAwaitable>
     TIoAwaitable&& TPromiseBase<T>::await_transform(TIoAwaitable&& awaitable) noexcept {
         if (!awaitable.HasEpoll()) {
+            VERIFY(Epoll != nullptr);
             awaitable.SetEpoll(Epoll);
         }
         return std::forward<TIoAwaitable>(awaitable);

@@ -88,6 +88,19 @@ TEST_F(Epoll, EventRemovedFromWatchlist) {
 
 }
 
+TEST_F(Epoll, CallbackRemovedFromWatchlist) {
+    TPipe pipe;
+    TWaitGroup wg;
+    wg.Inc();
+    epoll.Watch(TEpoll::EMode::kRead, pipe.ReadEnd(), [&wg] {
+        wg.Dec();
+    });
+
+    pipe.WriteEnd().Write("123", 3).await_resume();
+    wg.Block();
+    wg.Wait();
+}
+
 TEST_F(Epoll, MultipleFds) {
     int numEvents = 10;
     std::vector<TEventFd> eventFds(numEvents);

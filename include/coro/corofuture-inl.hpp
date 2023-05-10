@@ -2,7 +2,6 @@
 
 #include "corofuture.hpp"
 #include "promise.hpp"
-#include <iostream>
 
 namespace NAsync {
 
@@ -22,7 +21,7 @@ namespace NAsync {
     }
 
     template<typename T>
-    auto TCoroFuture<T>::Get() noexcept {
+    T TCoroFuture<T>::Get() noexcept {
         struct TDeferred {
             ~TDeferred() {
                 std::coroutine_handle<TPromise<T>>::from_promise(Promise).destroy();
@@ -47,8 +46,9 @@ namespace NAsync {
     }
 
     template<typename T>
-    void TCoroFuture<T>::SetEpoll(TEpoll* epoll) noexcept {
+    TCoroFuture<T>& TCoroFuture<T>::SetEpoll(TEpoll* epoll) noexcept {
         Promise_.Epoll = epoll;
+        return *this;
     }
 
     template<typename T>
@@ -59,6 +59,7 @@ namespace NAsync {
     template<typename T>
     void TCoroFuture<T>::await_suspend(std::coroutine_handle<> handle) noexcept {
         Promise_.Continuation = handle;
+        Run();
     }
 
     template<typename T>

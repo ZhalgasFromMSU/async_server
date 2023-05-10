@@ -19,10 +19,10 @@ namespace NAsync {
         void Run() noexcept;
         bool IsReady() noexcept;
         void Wait() noexcept;
-        auto Get() noexcept;
+        T Get() noexcept;
 
         bool HasEpoll() const noexcept;
-        void SetEpoll(TEpoll* epoll) noexcept;
+        TCoroFuture& SetEpoll(TEpoll* epoll) noexcept;
 
         bool await_ready() const noexcept;
         void await_suspend(std::coroutine_handle<> handle) noexcept;

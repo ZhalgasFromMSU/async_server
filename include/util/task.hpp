@@ -6,9 +6,6 @@
 
 namespace NAsync {
 
-    template<typename TFunc>
-    concept CVoidToVoid = std::is_same_v<void, std::invoke_result_t<TFunc>>;
-
     class TJob : public std::variant<std::coroutine_handle<>,
                                      std::function<void()>> {
     public:
