@@ -1,8 +1,6 @@
 #pragma once
 
 #include <coro/corofuture.hpp>
-#include <io/io_awaitable_base.hpp>
-#include <type_traits>
 
 namespace NAsync {
 

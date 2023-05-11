@@ -17,6 +17,7 @@ struct coro {
         }
     
         std::suspend_always final_suspend() noexcept {
+            std::coroutine_handle<promise_type>::from_promise(*this).destroy();
             return {};
         }
     
@@ -48,8 +49,6 @@ coro foo() {
 int main() {
     auto coro = foo();
     std::cerr << coro.obj.x << std::endl;
-    
-    coro.handle.destroy();
     // std::cerr << coro.obj.x << std::endl;
     return 0;
 }

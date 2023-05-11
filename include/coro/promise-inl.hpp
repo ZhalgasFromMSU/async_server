@@ -3,8 +3,6 @@
 #include "corofuture.hpp"
 #include "promise.hpp"
 
-#include <coroutine>
-
 namespace NAsync {
 
     // TPromiseBase<T>

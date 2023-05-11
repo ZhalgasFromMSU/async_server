@@ -79,3 +79,17 @@ TEST_F(Coro, NestedCoro) {
     ASSERT_EQ(task.Get(), 3);
 }
 
+TEST(SimpleCoro, SimpleNestedCoro) {
+    auto coro = []() -> TCoroFuture<void> {
+        auto nestedCoro = []() -> TCoroFuture<int> {
+            co_return 1;
+        };
+        [[maybe_unused]] int ret = co_await nestedCoro();
+        std::cerr << "Resuming outed\n";
+        co_return;
+    };
+
+    coro().Run().Get();
+    //ASSERT_EQ(task.Get(), 1);
+}
+

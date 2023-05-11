@@ -23,7 +23,7 @@ PUBLIC
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 
 # Compiler options
-add_compile_options(-Werror -Wall -pedantic)
+add_compile_options(-Werror -Wall -pedantic -g)
 
 # For debugging
 option(USE_THREAD_SANITIZER "Compile with thread sanitizer to detect data races")

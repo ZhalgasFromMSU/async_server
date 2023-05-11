@@ -1,10 +1,6 @@
 #pragma once
 
 #include <polling/epoll.hpp>
-#include <util/result.hpp>
-
-#include <coroutine>
-#include <future>
 
 namespace NAsync {
 
@@ -16,17 +12,17 @@ namespace NAsync {
     public:
         using promise_type = TPromise<T>;
 
-        void Run() noexcept;
-        bool IsReady() noexcept;
-        void Wait() noexcept;
+        TCoroFuture& Run() noexcept;
+        TCoroFuture& Wait() noexcept;
         T Get() noexcept;
+        bool IsReady() noexcept;
 
         bool HasEpoll() const noexcept;
         TCoroFuture& SetEpoll(TEpoll* epoll) noexcept;
 
         bool await_ready() const noexcept;
         void await_suspend(std::coroutine_handle<> handle) noexcept;
-        auto await_resume() noexcept;
+        T await_resume() noexcept;
 
     private:
         friend TPromise<T>;

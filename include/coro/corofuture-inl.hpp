@@ -6,8 +6,9 @@
 namespace NAsync {
 
     template<typename T>
-    void TCoroFuture<T>::Run() noexcept {
+    TCoroFuture<T>& TCoroFuture<T>::Run() noexcept {
         std::coroutine_handle<TPromise<T>>::from_promise(Promise_).resume();
+        return *this;
     }
 
     template<typename T>
@@ -16,8 +17,9 @@ namespace NAsync {
     }
 
     template<typename T>
-    void TCoroFuture<T>::Wait() noexcept {
-        return Promise_.Ready.wait(false);
+    TCoroFuture<T>& TCoroFuture<T>::Wait() noexcept {
+        Promise_.Ready.wait(false);
+        return *this;
     }
 
     template<typename T>
@@ -31,6 +33,8 @@ namespace NAsync {
         } defer {
             .Promise = Promise_
         };
+
+        Wait();
 
         if constexpr (std::is_same_v<T, void>) {
             VERIFY(Promise_.Ready.test());
@@ -63,7 +67,7 @@ namespace NAsync {
     }
 
     template<typename T>
-    auto TCoroFuture<T>::await_resume() noexcept {
+    T TCoroFuture<T>::await_resume() noexcept {
         return Get();
     }
 } // namespace NAsync
