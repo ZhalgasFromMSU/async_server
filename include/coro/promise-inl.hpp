@@ -64,7 +64,7 @@ namespace NAsync {
 
     template<typename T>
     TCoroFuture<T> TPromise<T>::get_return_object() noexcept {
-        return TCoroFuture<T>{*this};
+        return TCoroFuture<T>{this};
     }
 
     // TPromise<void>
@@ -74,7 +74,7 @@ namespace NAsync {
     }
 
     inline TCoroFuture<void> TPromise<void>::get_return_object() noexcept {
-        return TCoroFuture<void>{*this};
+        return TCoroFuture<void>{this};
     }
 
 } // namespace NAsync

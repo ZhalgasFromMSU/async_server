@@ -12,6 +12,12 @@ namespace NAsync {
     public:
         using promise_type = TPromise<T>;
 
+        ~TCoroFuture();
+        TCoroFuture(TCoroFuture&&) noexcept;
+        TCoroFuture& operator=(TCoroFuture&&) noexcept;
+        TCoroFuture(const TCoroFuture&) = delete;
+        TCoroFuture& operator=(const TCoroFuture&) = delete;
+
         TCoroFuture& Run() noexcept;
         TCoroFuture& Wait() noexcept;
         T Get() noexcept;
@@ -27,11 +33,11 @@ namespace NAsync {
     private:
         friend TPromise<T>;
 
-        TCoroFuture(TPromise<T>& promise) noexcept
+        TCoroFuture(TPromise<T>* promise) noexcept
             : Promise_{promise}
         {}
 
-        TPromise<T>& Promise_;
+        TPromise<T>* Promise_ = nullptr;
     };
 
 }

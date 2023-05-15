@@ -70,7 +70,8 @@ TEST_F(Coro, NestedCoro) {
     };
 
     TPipe pipe;
-    TCoroFuture<size_t> task = coro(pipe.ReadEnd()).SetEpoll(&Epoll);
+    TCoroFuture<size_t> task = coro(pipe.ReadEnd());
+    task.SetEpoll(&Epoll);
 
     task.Run();
     ASSERT_FALSE(task.IsReady());
@@ -85,7 +86,6 @@ TEST(SimpleCoro, SimpleNestedCoro) {
             co_return 1;
         };
         [[maybe_unused]] int ret = co_await nestedCoro();
-        std::cerr << "Resuming outed\n";
         co_return;
     };
 
