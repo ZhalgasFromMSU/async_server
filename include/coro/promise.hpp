@@ -15,8 +15,9 @@ namespace NAsync {
     public:
         void unhandled_exception() noexcept;
         std::suspend_always initial_suspend() noexcept;
-        std::suspend_always final_suspend() noexcept; // postpone promise destruction, until someone retrieves value
-                                                      // no allocation for future state though
+        auto final_suspend() noexcept; // postpone promise destruction until
+                                       // associated future destructed.
+                                       // no allocation for future state though
 
         template<std::derived_from<TWithEpoll> TIoAwaitable>
         TIoAwaitable&& await_transform(TIoAwaitable&& awaitable) noexcept;
@@ -25,7 +26,7 @@ namespace NAsync {
             requires (is_coro_future<TSubFuture>::value)
         TSubFuture&& await_transform(TSubFuture&& subCoro) noexcept;
 
-        // Members variables
+        // Member variables
         TEpoll* Epoll = nullptr;
         std::atomic_flag Ready;
         std::coroutine_handle<> Continuation;

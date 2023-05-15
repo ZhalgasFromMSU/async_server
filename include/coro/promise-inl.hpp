@@ -12,11 +12,20 @@ namespace NAsync {
     }
 
     template<typename T>
-    std::suspend_always TPromiseBase<T>::final_suspend() noexcept {
-        if (Continuation) {
-            Continuation.resume();
-        }
-        return {};
+    auto TPromiseBase<T>::final_suspend() noexcept {
+        struct TSuspendAlwaysWithDestroy : public std::suspend_always {
+            constexpr void await_suspend(std::coroutine_handle<>) const noexcept {
+                if (Continuation) {
+                    Continuation.resume();
+                }
+            }
+
+            std::coroutine_handle<> Continuation;
+        };
+
+        return TSuspendAlwaysWithDestroy{
+            .Continuation = Continuation,
+        };
     }
 
     template<typename T>

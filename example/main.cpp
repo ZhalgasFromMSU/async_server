@@ -12,13 +12,18 @@ struct Obj {
 
 struct coro {
     struct promise_type {
-        std::suspend_never initial_suspend() noexcept {
+        std::suspend_always initial_suspend() noexcept {
             return {};
         }
     
-        std::suspend_always final_suspend() noexcept {
-            std::coroutine_handle<promise_type>::from_promise(*this).destroy();
-            return {};
+        auto final_suspend() noexcept {
+            struct custom_suspend : public std::suspend_always {
+                void await_suspend(std::coroutine_handle<> handle) noexcept {
+                    std::cerr << "Zdes\n";
+                    handle.destroy();
+                }
+            };
+            return custom_suspend{};
         }
     
         void unhandled_exception() {
@@ -46,9 +51,13 @@ coro foo() {
     co_return;
 }
 
+void goo() {
+    auto task = foo();
+    task.handle.resume();
+    // task.handle.destroy();
+}
+
 int main() {
-    auto coro = foo();
-    std::cerr << coro.obj.x << std::endl;
-    // std::cerr << coro.obj.x << std::endl;
+    goo();
     return 0;
 }
