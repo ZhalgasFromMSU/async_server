@@ -81,15 +81,51 @@ TEST_F(Coro, NestedCoro) {
 }
 
 TEST(SimpleCoro, SimpleNestedCoro) {
-    auto coro = []() -> TCoroFuture<void> {
+    auto coro = []() -> TCoroFuture<int> {
         auto nestedCoro = []() -> TCoroFuture<int> {
             co_return 1;
         };
-        [[maybe_unused]] int ret = co_await nestedCoro();
-        co_return;
+        co_return co_await nestedCoro();
     };
 
-    coro().Run().Get();
-    //ASSERT_EQ(task.Get(), 1);
+    ASSERT_EQ(coro().Run().Get(), 1);
+}
+
+TEST(SimpleCoro, SimpleMultiNestedCoro) {
+    auto coro = []() -> TCoroFuture<int> {
+        auto nestedCoro = []() -> TCoroFuture<int> {
+            auto nestedNestedCoro = []() -> TCoroFuture<int> {
+                co_return 1;
+            };
+            co_return co_await nestedNestedCoro();
+        };
+        co_return co_await nestedCoro();
+    };
+
+    ASSERT_EQ(*coro().Run().Peek(), 1);
+    ASSERT_EQ(coro().Peek(), nullptr);
+}
+
+TEST(SimpleCoro, CoroVector) {
+    size_t size = 10;
+    std::vector<TCoroFuture<size_t>> coros;
+    coros.reserve(size);
+
+    for (size_t i = 0; i < 10; ++i) {
+        coros.emplace_back(
+            [](size_t i) -> TCoroFuture<size_t> {
+                co_return i;
+            }(i)
+        );
+    }
+
+    for (auto& coro : coros) {
+        coro.Run();
+    }
+
+    size_t i = 0;
+    for (auto& coro : coros) {
+        ASSERT_EQ(*coro.Peek(), i++);
+    }
 }
 

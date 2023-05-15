@@ -13,13 +13,17 @@ namespace NAsync {
     }
 
     template<typename T>
-    TCoroFuture<T>::TCoroFuture(TCoroFuture<T>&& other) noexcept {
-        std::swap(Promise_, other.Promise_);
-    }
+    TCoroFuture<T>::TCoroFuture(TCoroFuture<T>&& other) noexcept
+        : Promise_ {std::exchange(other.Promise_, nullptr)}
+    {}
 
     template<typename T>
     TCoroFuture<T>& TCoroFuture<T>::operator=(TCoroFuture<T>&& other) noexcept {
-        std::swap(Promise_, other.Promise_);
+        if (Promise_) {
+            std::coroutine_handle<TPromise<T>>::from_promise(*Promise_).destroy();
+        }
+
+        Promise_ = std::exchange(other.Promise_, nullptr);
         return *this;
     }
 
@@ -30,7 +34,7 @@ namespace NAsync {
     }
 
     template<typename T>
-    bool TCoroFuture<T>::IsReady() noexcept {
+    bool TCoroFuture<T>::IsReady() const noexcept {
         return Promise_->Ready.test();
     }
 
@@ -48,6 +52,17 @@ namespace NAsync {
             return;
         } else {
             return *std::move(Promise_->Value);
+        }
+    }
+
+    template<typename T>
+    const T* TCoroFuture<T>::Peek() const noexcept
+        requires (!std::is_same_v<T, void>)
+    {
+        if (!IsReady()) {
+            return nullptr;
+        } else {
+            return &Promise_->Value.value();
         }
     }
 
