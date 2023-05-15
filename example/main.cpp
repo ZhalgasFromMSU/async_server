@@ -48,11 +48,15 @@ struct coro {
 };
 
 coro foo() {
+    std::cerr << "s1\n";
+    co_await std::suspend_always{};
+    std::cerr << "s2\n";
     co_return;
 }
 
 void goo() {
     auto task = foo();
+    task.handle.resume();
     task.handle.resume();
     // task.handle.destroy();
 }

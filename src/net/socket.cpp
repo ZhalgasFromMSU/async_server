@@ -101,7 +101,7 @@ namespace NAsync {
     TResult<TListeningSocket> TListeningSocket::Create(TSocketAddress address, int queueSize) noexcept {
         TConverter cv{address};
 
-        int sockFd = socket(cv.Domain(), SOCK_STREAM, 0);
+        int sockFd = socket(cv.Domain(), SOCK_STREAM | SOCK_NONBLOCK, 0);
         if (sockFd == -1) {
             return std::error_code{errno, std::system_category()};
         }

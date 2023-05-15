@@ -61,7 +61,7 @@ add_executable(${TESTS_GROUP}
     tests/test_io.cpp
     tests/test_coro.cpp
     tests/test_net.cpp
-    # tests/test_socket.cpp
+    tests/test_socket.cpp
     tests/test_address.cpp
 )
 

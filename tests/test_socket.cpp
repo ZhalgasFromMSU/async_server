@@ -1,7 +1,5 @@
 #include "utils.hpp"
 #include <net/socket.hpp>
-#include <net/accept_connect_awiatable.hpp>
-#include <io/read_write_awaitable.hpp>
 #include <coro/coroutine.hpp>
 
 #include <gtest/gtest.h>
@@ -45,23 +43,24 @@ TEST(Socket, AcceptConnect) {
     };
 
     TEpoll epoll;
-    TThreadPool threadPool;
-    threadPool.Start();
+    epoll.Start();
 
-    auto serverTask = server();
+    TCoroFuture<void> serverTask = server();
     serverTask.SetEpoll(&epoll);
-    serverTask.SetThreadPool(&threadPool);
-    auto serverFuture = serverTask.Run();
+    serverTask.Run();
 
-    auto clientTask = client();
+    TCoroFuture<void> clientTask = client();
     clientTask.SetEpoll(&epoll);
-    clientTask.SetThreadPool(&threadPool);
-    auto clientFuture = clientTask.Run();
+    clientTask.Run();
 
-    serverFuture.wait_for(std::chrono::seconds(1));
-    ASSERT_TRUE(NPrivate::IsReady(serverFuture));
-    clientFuture.wait_for(std::chrono::seconds(1));
-    ASSERT_TRUE(NPrivate::IsReady(clientFuture));
+    for (int i = 0; i < 100; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        if (serverTask.IsReady() && clientTask.IsReady()) {
+            break;
+        }
+    }
+    ASSERT_TRUE(serverTask.IsReady());
+    ASSERT_TRUE(clientTask.IsReady());
 }
 
 TEST(Socket, PingPong) {
@@ -71,6 +70,7 @@ TEST(Socket, PingPong) {
         port = std::get<TIPv6SocketAddress>(acceptor->Address()).second;
         port.notify_one();
         TResult<TSocket> socket = co_await acceptor->Accept();
+        VERIFY_RESULT(socket);
         char buf[sizeof("pingpong")];
         size_t numRead = 0;
         while (numRead < sizeof(buf)) {
@@ -83,8 +83,8 @@ TEST(Socket, PingPong) {
     auto client = [&port]() -> TCoroFuture<void> {
         TResult<TSocket> socket = TSocket::Create<TIPv6Address>(true /* streamingSocket */);
         port.wait(0);
-        VERIFY_EC(co_await socket->Connect(std::make_pair(TIPv6Address::Localhost(), port.load())));
-
+        std::error_code error = co_await socket->Connect(std::make_pair(TIPv6Address::Localhost(), port.load()));
+        VERIFY_EC(error);
         char buf[] = "pingpong";
         size_t numWritten = 0;
         while (numWritten < sizeof(buf)) {
@@ -93,25 +93,23 @@ TEST(Socket, PingPong) {
         }
     };
 
-    TEpoll epoll;
-    TThreadPool tp;
-    tp.Start();
+    TEpoll epoll {1}; // fix me
+    epoll.Start();
 
-    auto serverTask = server();
+    TCoroFuture<std::string> serverTask = server();
     serverTask.SetEpoll(&epoll);
-    serverTask.SetThreadPool(&tp);
-    auto serverFuture = serverTask.Run();
+    serverTask.Run();
 
-    auto clientTask = client();
+    TCoroFuture<void> clientTask = client();
     clientTask.SetEpoll(&epoll);
-    clientTask.SetThreadPool(&tp);
-    auto clientFuture = clientTask.Run();
+    clientTask.Run();
 
-    clientFuture.wait_for(std::chrono::seconds(1));
-    ASSERT_TRUE(NPrivate::IsReady(clientFuture));
-    serverFuture.wait_for(std::chrono::seconds(1));
-    ASSERT_TRUE(NPrivate::IsReady(serverFuture));
-
-    ASSERT_TRUE(serverFuture.get() == "pingpong");
+    for (int i = 0; i < 100; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        if (serverTask.IsReady() && clientTask.IsReady()) {
+            break;
+        }
+    }
+    ASSERT_TRUE(*serverTask.Peek() == "pingpong");
 }
 
