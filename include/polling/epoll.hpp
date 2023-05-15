@@ -29,7 +29,7 @@ namespace NAsync {
         TEventFd EventFd_; // to stop epoll_wait
         std::atomic_flag Stopped_;
 
-        std::recursive_mutex Mut_;
+        std::recursive_mutex Mut_; // recursive because callback can schedule again
         std::unordered_map<int, TJob> Cbs_; // <fd, callback>
 
         std::jthread Worker_;
