@@ -3,6 +3,8 @@
 #include <io/well_known_structs.hpp>
 #include <thread/pool.hpp>
 
+#include <mutex>
+
 namespace NAsync {
 
     // Epoll can work asynchronously. E.g. new fds can be added in already running epoll_wait
@@ -27,7 +29,7 @@ namespace NAsync {
         TEventFd EventFd_; // to stop epoll_wait
         std::atomic_flag Stopped_;
 
-        std::mutex Mut_;
+        std::recursive_mutex Mut_;
         std::unordered_map<int, TJob> Cbs_; // <fd, callback>
 
         std::jthread Worker_;

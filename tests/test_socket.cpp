@@ -93,7 +93,7 @@ TEST(Socket, PingPong) {
         }
     };
 
-    TEpoll epoll {1}; // fix me
+    TEpoll epoll;
     epoll.Start();
 
     TCoroFuture<std::string> serverTask = server();
