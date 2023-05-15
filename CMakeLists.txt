@@ -18,6 +18,7 @@ PUBLIC
     src/net/socket.cpp
     src/util/result.cpp
     src/coro/coro.cpp
+    src/http/message.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC include)
@@ -63,6 +64,7 @@ add_executable(${TESTS_GROUP}
     tests/test_net.cpp
     tests/test_socket.cpp
     tests/test_address.cpp
+    tests/test_http.cpp
 )
 
 target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME})
