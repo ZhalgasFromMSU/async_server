@@ -4,6 +4,7 @@ project(Async)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+set(FETCHCONTENT_QUIET FALSE)
 
 add_library(${PROJECT_NAME})
 
@@ -37,12 +38,14 @@ FetchContent_MakeAvailable(Boost)
 
 # Dependepncies
 FetchContent_Declare(
-    httpparser
+    Httpparser
     GIT_REPOSITORY https://github.com/nekipelov/httpparser.git
     GIT_TAG ac5e383805a1a84ede1e164b9a543b3ab92c84ff
 )
-FetchContent_MakeAvailable(httpparser)
-target_link_libraries(${PROJECT_NAME} PRIVATE httpparser)
+FetchContent_MakeAvailable(Httpparser)
+
+target_link_libraries(${PROJECT_NAME} httparser)
+target_include_directories(${PROJECT_NAME} PUBLIC ${httparser_SOURCE_DIR}/src)
 
 # Compiler options
 add_compile_options(-Werror -Wall -pedantic -g)
@@ -87,7 +90,7 @@ add_executable(${TESTS_GROUP}
     tests/test_http.cpp
 )
 
-target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME})
+target_link_libraries(${TESTS_GROUP} GTest::gtest_main ${PROJECT_NAME} httparser)
 target_include_directories(${TESTS_GROUP} PRIVATE include tests)
 
 # Discover tests
