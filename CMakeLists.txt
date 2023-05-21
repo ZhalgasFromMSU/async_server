@@ -8,6 +8,23 @@ set(FETCHCONTENT_QUIET FALSE)
 
 add_library(${PROJECT_NAME})
 
+# Subprojects
+include(FetchContent)
+
+FetchContent_Declare(
+    HttpParser
+    GIT_REPOSITORY https://github.com/ZhalgasFromMSU/httpparser.git
+    GIT_TAG master
+    OVERRIDE_FIND_PACKAGE
+)
+
+FetchContent_MakeAvailable(
+    HttpParser
+)
+
+target_include_directories(${PROJECT_NAME} PUBLIC include ${httparser_SOURCE_DIR}/src)
+
+# Sources
 target_sources(${PROJECT_NAME}
 PUBLIC
     src/thread/wait_group.cpp
@@ -21,31 +38,6 @@ PUBLIC
     src/coro/coro.cpp
     src/http/message.cpp
 )
-
-target_include_directories(${PROJECT_NAME} PUBLIC include)
-
-include(FetchContent)
-
-# Dependencies for Dependencies
-FetchContent_Declare(
-    Boost
-    URL https://boostorg.jfrog.io/artifactory/main/release/1.82.0/source/boost_1_82_0.tar.gz
-    URL_HASH SHA256=66a469b6e608a51f8347236f4912e27dc5c60c60d7d53ae9bfe4683316c6f04c
-    OVERRIDE_FIND_PACKAGE
-)
-
-FetchContent_MakeAvailable(Boost)
-
-# Dependepncies
-FetchContent_Declare(
-    Httpparser
-    GIT_REPOSITORY https://github.com/nekipelov/httpparser.git
-    GIT_TAG ac5e383805a1a84ede1e164b9a543b3ab92c84ff
-)
-FetchContent_MakeAvailable(Httpparser)
-
-target_link_libraries(${PROJECT_NAME} httparser)
-target_include_directories(${PROJECT_NAME} PUBLIC ${httparser_SOURCE_DIR}/src)
 
 # Compiler options
 add_compile_options(-Werror -Wall -pedantic -g)
