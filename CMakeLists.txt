@@ -13,9 +13,13 @@ add_library(${PROJECT_NAME})
 target_sources(${PROJECT_NAME}
 PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
   async.cpp
+
   src/sync/waitgroup.cpp
   src/sync/queue.cpp
   src/sync/threadpool.cpp
+
+  src/io/ioobject.cpp
+  src/io/pipe.cpp
 )
 
 include(CTest)
