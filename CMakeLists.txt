@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.28)
 
+project(async CXX)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-project(async CXX)
+include(FetchContent)
+include(CTest)
 
 add_compile_options(-g -Wall -Werror -pedantic)
 
@@ -20,9 +23,11 @@ PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 
   src/io/ioobject.cpp
   src/io/pipe.cpp
+  src/io/uring.cpp
 )
 
-include(CTest)
+add_subdirectory(thirdparty)
+
 if (BUILD_TESTING)
   add_subdirectory(tests)
 endif()
