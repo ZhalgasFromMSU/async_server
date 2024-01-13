@@ -24,9 +24,21 @@ PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
   src/io/ioobject.cpp
   src/io/pipe.cpp
   src/io/uring.cpp
+  src/io/operation.cpp
+  src/io/eventloop.cpp
 )
 
 add_subdirectory(thirdparty)
+
+option(USE_URING "Use uring as IO handler" ON)
+if (USE_URING)
+  find_library(LIBURING uring)
+  if (LIBURING STREQUAL "LIBURING-NOTFOUND")
+    message(SEND_ERROR "liburing was not found")
+  else()
+    target_link_libraries(${PROJECT_NAME} ${LIBURING})
+  endif()
+endif()
 
 if (BUILD_TESTING)
   add_subdirectory(tests)

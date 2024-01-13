@@ -52,6 +52,10 @@ namespace async {
       return ret;
     }
 
+    IoObject& ReadEnd() noexcept {
+      return read_end_;
+    }
+
   private:
     Pipe(int read_fd, int write_fd) noexcept
         : read_end_{read_fd}

@@ -5,11 +5,11 @@ module;
 #include <cassert>
 #include <unistd.h>
 
-module async:ioobject;
+export module async:ioobject;
 
 namespace async {
 
-  class IoObject {
+  export class IoObject {
   public:
     IoObject() = default;
     explicit IoObject(int fd)
