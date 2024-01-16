@@ -6,7 +6,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(example CXX)
 
-add_subdirectory(../ async)
+add_executable(${PROJECT_NAME}
+  main.cpp
+)
 
-add_executable(${PROJECT_NAME} main.cpp)
-target_link_libraries(${PROJECT_NAME} async)
+target_sources(${PROJECT_NAME}
+PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
+  interface.cpp
+)

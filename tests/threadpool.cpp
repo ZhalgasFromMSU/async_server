@@ -3,7 +3,6 @@ module;
 #include <gtest/gtest.h>
 
 module async;
-import :threadpool;
 
 TEST(ThreadPool, Trivial) {
   std::atomic<std::size_t> counter = 0;

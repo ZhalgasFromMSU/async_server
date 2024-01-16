@@ -7,8 +7,6 @@ module;
 
 module async;
 
-import :waitgroup;
-
 TEST(WaitGroup, Trivial) {
   async::WaitGroup wg;
   ASSERT_TRUE(wg.TryInc());

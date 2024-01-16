@@ -14,8 +14,10 @@ add_executable(${PROJECT_NAME}
   queue.cpp
   threadpool.cpp
 
+  epoll.cpp
   pipe.cpp
   iouring.cpp
+  operation.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} ${CMAKE_PROJECT_NAME} GTest::gtest_main)

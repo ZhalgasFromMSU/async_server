@@ -6,7 +6,6 @@ module;
 #include <thread>
 
 module async;
-import :queue;
 
 TEST(Queue, Trivial) {
   async::Queue<int> queue(1, 1, 1);

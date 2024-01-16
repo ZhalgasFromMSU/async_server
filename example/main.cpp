@@ -1,9 +1,8 @@
 #include <iostream>
 
-import async;
+import Mod;
 
 int main() {
-  async::WaitGroup wg;
-  std::cout << "Hello, World!" << std::endl;
+  std::cout << foo(1) << std::endl;
   return 0;
 }
