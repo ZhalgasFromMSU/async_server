@@ -20,7 +20,6 @@ PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
   src/sync/waitgroup.cpp
   src/sync/queue.cpp
   src/sync/threadpool.cpp
-  src/sync/hashmap.cpp
 
   src/ap/ioobject.cpp
   src/ap/pipe.cpp
@@ -28,7 +27,6 @@ PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
   src/io/epoll.cpp
   src/io/uring.cpp
   src/io/operation.cpp
-  src/io/eventloop.cpp
 )
 
 add_subdirectory(thirdparty)

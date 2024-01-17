@@ -43,8 +43,8 @@ namespace async {
       io_uring_queue_exit(&ring_);
     }
 
-    template<OpType type>
-    std::error_code Enqueue(OpDescr auto&& op, uint64_t user_data) noexcept;
+    template<OpType type, OpDescr Descr>
+    std::error_code Enqueue(Descr&& op, uint64_t user_data) noexcept;
 
     tl::expected<OpResult, std::error_code> Dequeue() noexcept;
 
@@ -53,9 +53,8 @@ namespace async {
     io_uring ring_;
   };
 
-  template<OpType type>
-  std::error_code IoUring::Enqueue(OpDescr auto&& op,
-                                   uint64_t user_data) noexcept {
+  template<OpType type, OpDescr Descr>
+  std::error_code IoUring::Enqueue(Descr&& op, uint64_t user_data) noexcept {
     io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
     assert(sqe != nullptr && "Ring buffer is full");
 

@@ -4,7 +4,6 @@ export module async;
 export import :waitgroup;
 export import :queue;
 export import :threadpool;
-export import :hashmap;
 
 // io
 export import :iouring;
