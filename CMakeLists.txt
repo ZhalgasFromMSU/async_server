@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(async CXX)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -20,6 +20,7 @@ PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
   src/sync/waitgroup.cpp
   src/sync/queue.cpp
   src/sync/threadpool.cpp
+  src/sync/optional.cpp
 
   src/ap/ioobject.cpp
   src/ap/pipe.cpp
@@ -27,6 +28,8 @@ PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
   src/io/epoll.cpp
   src/io/uring.cpp
   src/io/operation.cpp
+
+  src/coro/future.cpp
 )
 
 add_subdirectory(thirdparty)

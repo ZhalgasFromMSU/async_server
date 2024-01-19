@@ -6,11 +6,11 @@ module;
 #include <vector>
 
 export module async:queue;
+import :optional;
 
 namespace async {
 
   export template<typename T>
-    requires(std::is_nothrow_move_constructible_v<T>)
   class Queue {
   public:
     Queue(std::size_t max_size_hint, std::size_t num_writers,
@@ -20,19 +20,14 @@ namespace async {
         , data_(std::max({max_size_hint, num_writers, num_readers})) {
     }
 
-    ~Queue() {
-      for (std::size_t i = read_idx_.load(); i < write_idx_.load(); ++i) {
-        data_[i % data_.size()].payload.obj.~T();
-      }
-    }
-
     template<typename... Args>
     bool TryPush(Args&&... obj) noexcept {
       std::size_t idx;
       while (true) {
         std::size_t cur_w_idx = write_idx_.load(std::memory_order_relaxed);
         std::size_t cur_r_idx = read_idx_.load(std::memory_order_relaxed);
-        if (cur_w_idx >= cur_r_idx && cur_w_idx - cur_r_idx >= data_.size()) {
+        if ((cur_w_idx >= cur_r_idx && cur_w_idx - cur_r_idx >= data_.size()) ||
+            !data_[cur_w_idx % data_.size()].IsEmpty()) {
           return false;
         }
 
@@ -47,17 +42,23 @@ namespace async {
         }
       }
 
-      SetPayload(data_[idx % data_.size()], std::forward<Args>(obj)...);
+      data_[idx % data_.size()].PushUnsafe(std::forward<Args>(obj)...);
       return true;
     }
 
-    std::optional<T> TryPop() noexcept {
+    std::conditional_t<std::is_same_v<T, void>, bool, std::optional<T>>
+    TryPop() noexcept {
       std::size_t idx;
       while (true) {
         std::size_t cur_w_idx = write_idx_.load(std::memory_order_relaxed);
         std::size_t cur_r_idx = read_idx_.load(std::memory_order_relaxed);
-        if (cur_w_idx <= cur_r_idx) {
-          return std::nullopt;
+        if (cur_w_idx <= cur_r_idx ||
+            !data_[cur_r_idx % data_.size()].IsReady()) {
+          if constexpr (std::is_same_v<T, void>) {
+            return false;
+          } else {
+            return std::nullopt;
+          }
         }
 
         if (num_readers_ == 1) {
@@ -71,58 +72,30 @@ namespace async {
         }
       }
 
-      return RetrievePayload(data_[idx % data_.size()]);
+      if constexpr (std::is_same_v<T, void>) {
+        data_[idx % data_.size()].PopUnsafe();
+        return true;
+      } else {
+        return data_[idx % data_.size()].PopUnsafe();
+      }
     }
 
     template<typename... Args>
     void Push(Args&&... obj) noexcept {
-      SetPayload(data_[write_idx_.fetch_add(1, std::memory_order_relaxed) %
-                       data_.size()],
-                 std::forward<Args>(obj)...);
+      data_[write_idx_.fetch_add(1, std::memory_order_relaxed) % data_.size()]
+          .Push(std::forward<Args>(obj)...);
     }
 
     T Pop() noexcept {
-      return RetrievePayload(
-          data_[read_idx_.fetch_add(1, std::memory_order_relaxed) %
-                data_.size()]);
+      return data_[read_idx_.fetch_add(1, std::memory_order_relaxed) %
+                   data_.size()]
+          .Pop();
     }
 
   private:
-    union Payload {
-      T obj;
-
-      Payload() noexcept {
-      }
-
-      ~Payload() {
-      }
-    };
-
-    struct Node {
-      Payload payload;
-      std::atomic_flag available;
-    };
-
-    template<typename... Args>
-    static void SetPayload(Node& node, Args&&... obj) {
-      node.available.wait(true, std::memory_order_acquire);
-      new (&node.payload.obj) T(std::forward<Args>(obj)...);
-      node.available.test_and_set(std::memory_order_release);
-      node.available.notify_one();
-    }
-
-    static T RetrievePayload(Node& node) {
-      node.available.wait(false, std::memory_order_acquire);
-      T ret = std::move(node.payload.obj);
-      node.payload.obj.~T();
-      node.available.clear(std::memory_order_release);
-      node.available.notify_one();
-      return ret;
-    }
-
     std::size_t num_writers_;
     std::size_t num_readers_;
-    std::vector<Node> data_;
+    std::vector<Optional<T>> data_;
     std::atomic<std::size_t> write_idx_ = 0;
     std::atomic<std::size_t> read_idx_ = 0;
   };

@@ -17,8 +17,14 @@ TEST(Queue, Trivial) {
 
 TEST(Queue, Pop) {
   async::Queue<int> queue(1, 1, 1);
-  std::jthread consumer{[&] { ASSERT_EQ(queue.Pop(), 1); }};
-  std::jthread producer{[&] { ASSERT_TRUE(queue.TryPush(1)); }};
+  std::jthread consumer{[&] {
+    if (queue.Pop() != 1) {
+      std::terminate();
+    }
+  }};
+  std::jthread producer{[&] {
+    queue.Push(1);
+  }};
 }
 
 TEST(Queue, SpSc) {
@@ -35,7 +41,7 @@ TEST(Queue, SpSc) {
   std::jthread producer{[&] {
     std::size_t counter = 0;
     while (counter < 1000) {
-      ASSERT_TRUE(queue.TryPush(counter++));
+      queue.Push(counter++);
     }
   }};
 }
@@ -48,13 +54,14 @@ TEST(Queue, SpMc) {
   {
     std::vector<std::jthread> consumers;
     for (std::size_t i = 0; i < n_consumers; ++i) {
-      consumers.emplace_back(
-          [&] { sum.fetch_add(queue.Pop(), std::memory_order_relaxed); });
+      consumers.emplace_back([&] {
+        sum.fetch_add(queue.Pop(), std::memory_order_relaxed);
+      });
     }
 
     std::jthread producer{[&] {
       for (std::size_t i = 0; i < n_consumers; ++i) {
-        ASSERT_TRUE(queue.TryPush(std::move(i)));
+        queue.Push(i);
       }
     }};
   }
@@ -98,6 +105,30 @@ TEST(Queue, MpMc) {
     }
   }
 
-  ASSERT_TRUE(
-      std::ranges::all_of(flags, [](auto& flag) { return flag.test(); }));
+  ASSERT_TRUE(std::ranges::all_of(flags, [](auto& flag) {
+    return flag.test();
+  }));
+}
+
+TEST(Queue, PingPong) {
+  async::Queue<void> queue1{1, 1, 1}, queue2{1, 1, 1};
+  bool ball = false;
+
+  std::jthread consumer{[&] {
+    while (true) {
+      queue1.Pop();
+      ASSERT_FALSE(ball);
+      ball = true;
+      queue2.Push();
+    }
+  }};
+
+  std::jthread producer{[&] {
+    while (true) {
+      queue2.Pop();
+      ASSERT_TRUE(ball);
+      ball = false;
+      queue1.Push();
+    }
+  }};
 }

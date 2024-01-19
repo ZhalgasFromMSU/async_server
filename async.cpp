@@ -13,3 +13,6 @@ export import :operation;
 // access points
 export import :ioobject;
 export import :pipe;
+
+// coro
+export import :future;
