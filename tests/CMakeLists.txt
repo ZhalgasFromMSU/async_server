@@ -18,6 +18,8 @@ add_executable(${PROJECT_NAME}
   pipe.cpp
   iouring.cpp
   operation.cpp
+
+  coro.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} ${CMAKE_PROJECT_NAME} GTest::gtest_main)

@@ -34,18 +34,22 @@ namespace async {
         }
       }
 
-      void return_void() noexcept {
-        static_assert(std::is_same_v<T, void>);
-        payload.EmplaceUnsafe();
-      }
+      // void return_void() noexcept {
+      //   static_assert(std::is_same_v<T, void>);
+      //   payload.PushUnsafe();
+      // }
 
       template<typename U>
       void return_value(U&& ret) noexcept {
-        payload.EmplaceUnsafe(std::forward<U>(ret));
+        payload.PushUnsafe(std::forward<U>(ret));
       }
 
       Optional<T> payload;
     };
+
+    void Run() noexcept {
+      std::coroutine_handle<promise_type>::from_promise(promise_).resume();
+    }
 
   private:
     explicit Future(promise_type& promise) noexcept
