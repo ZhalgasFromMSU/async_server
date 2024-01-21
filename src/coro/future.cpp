@@ -10,53 +10,74 @@ import :optional;
 namespace async {
 
   export template<typename T>
+  class Future;
+
+  template<typename T>
+  struct PromiseBase {
+    std::suspend_always initial_suspend() noexcept {
+      return {};
+    }
+
+    std::suspend_always final_suspend() noexcept {
+      return {};
+    }
+
+    void unhandled_exception() noexcept {
+      try {
+        std::rethrow_exception(std::current_exception());
+      } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        std::terminate();
+      }
+    }
+
+    Future<T> get_return_object() noexcept;
+
+    Optional<T> payload;
+  };
+
+  template<typename T>
+  struct Promise : PromiseBase<T> {
+    template<typename U>
+    void return_value(U&& ret) noexcept {
+      this->payload.Push(std::forward<U>(ret));
+    }
+  };
+
+  template<>
+  struct Promise<void> : PromiseBase<void> {
+    void return_void() noexcept {
+      payload.Push();
+    }
+  };
+
+  template<typename T>
   class Future {
   public:
-    struct promise_type {
-      std::suspend_always initial_suspend() noexcept {
-        return {};
-      }
+    using promise_type = Promise<T>;
 
-      std::suspend_always final_suspend() noexcept {
-        return {};
-      }
-
-      Future get_return_object() noexcept {
-        return Future{*this};
-      }
-
-      void unhandled_exception() noexcept {
-        try {
-          std::rethrow_exception(std::current_exception());
-        } catch (const std::exception& e) {
-          std::cerr << e.what() << std::endl;
-          std::terminate();
-        }
-      }
-
-      // void return_void() noexcept {
-      //   static_assert(std::is_same_v<T, void>);
-      //   payload.PushUnsafe();
-      // }
-
-      template<typename U>
-      void return_value(U&& ret) noexcept {
-        payload.PushUnsafe(std::forward<U>(ret));
-      }
-
-      Optional<T> payload;
-    };
-
-    void Run() noexcept {
+    Future& Run() noexcept {
       std::coroutine_handle<promise_type>::from_promise(promise_).resume();
+      return *this;
+    }
+
+    T Get() noexcept {
+      return promise_.payload.Pop();
     }
 
   private:
+    friend Promise<T>;
+
     explicit Future(promise_type& promise) noexcept
         : promise_{promise} {
     }
 
     promise_type& promise_;
   };
+
+  template<typename T>
+  Future<T> PromiseBase<T>::get_return_object() noexcept {
+    return Future<T>{*this};
+  }
 
 } // namespace async
