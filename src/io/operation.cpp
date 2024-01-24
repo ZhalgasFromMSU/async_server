@@ -2,8 +2,6 @@ module;
 
 #include <utility>
 
-#include <cstdint>
-
 export module async:operation;
 
 namespace async {
@@ -31,36 +29,24 @@ namespace async {
 
   } // namespace arg
 
-  template<arg::OpArg... Args>
-  struct TOpDescr : Args... {};
-
-  template<typename T>
-  struct IsOpDescr : std::false_type {};
-
-  template<typename... Args>
-  struct IsOpDescr<TOpDescr<Args...>> : std::true_type {};
-
-  export template<typename T>
-  concept OpDescr = IsOpDescr<std::remove_cvref_t<T>>::value;
-
-  export template<typename... Args>
-  auto BuildOpDescr(Args&&... args) noexcept {
-    return TOpDescr<Args...>{std::forward<Args>(args)...};
-  }
-
-  export template<arg::OpArg Arg, OpDescr Op>
-  auto GetArg(Op&& op) {
-    return static_cast<Arg>(op).v;
-  }
-
   export enum class OpType {
     kRead,
     kWrite,
   };
 
-  export struct OpResult {
-    int result;
-    uint64_t user_data;
+  export template<OpType type, arg::OpArg... Bases>
+  struct Operation : Bases... {
+    static constexpr OpType op_type = type;
   };
+
+  export template<OpType type, arg::OpArg... Args>
+  auto BuildOp(Args&&... args) noexcept {
+    return Operation<type, Args...>{std::forward<Args>(args)...};
+  }
+
+  export template<arg::OpArg Arg>
+  auto GetArg(auto&& operation) {
+    return static_cast<Arg>(operation).v;
+  }
 
 } // namespace async

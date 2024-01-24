@@ -9,6 +9,8 @@ module;
 
 export module async:pipe;
 import :ioobject;
+import :awaitable;
+import :operation;
 
 namespace async {
 
@@ -34,12 +36,22 @@ namespace async {
       return std::move(pipe);
     }
 
-    IoObject& ReadEnd() noexcept {
-      return read_end_;
+    template<typename IoProvider>
+    Awaitable auto Read(IoProvider& dispatcher, void* buffer,
+                        std::size_t num) noexcept {
+      return OperationAwaitable{dispatcher,
+                                BuildOp<OpType::kRead>(arg::buffer{buffer},
+                                                       arg::fd{read_end_.fd()},
+                                                       arg::count{num})};
     }
 
-    IoObject& WriteEnd() noexcept {
-      return write_end_;
+    template<typename IoDispatcher>
+    Awaitable auto Write(IoDispatcher& dispatcher, const void* buffer,
+                         std::size_t num) noexcept {
+      return OperationAwaitable{
+          dispatcher,
+          BuildOp<OpType::kWrite>(arg::cbuffer{buffer},
+                                  arg::fd{write_end_.fd()}, arg::count{num})};
     }
 
   private:

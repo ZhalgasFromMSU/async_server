@@ -24,12 +24,15 @@ PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 
   src/ap/ioobject.cpp
   src/ap/pipe.cpp
+  src/ap/eventfd.cpp
 
   src/io/epoll.cpp
   src/io/uring.cpp
   src/io/operation.cpp
 
   src/coro/future.cpp
+  src/coro/eventloop.cpp
+  src/coro/awaitable.cpp
 )
 
 add_subdirectory(thirdparty)
