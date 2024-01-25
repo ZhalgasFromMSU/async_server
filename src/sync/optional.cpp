@@ -95,6 +95,10 @@ namespace async {
       return status_.load(std::memory_order_acquire) == Status::kEmpty;
     }
 
+    T& Ref() noexcept {
+      return payload_.obj;
+    }
+
   private:
     enum class Status {
       kEmpty,

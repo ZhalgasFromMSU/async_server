@@ -26,9 +26,7 @@ namespace async {
   public:
     Epoll(ConstructionToken, int epoll_fd) noexcept
         : epoll_{epoll_fd}
-        , stop_crane_{EventFd::Create().value()} {
-      stop_arena_.second = std::unique_ptr<AwaitableBase>(
-          new OperationAwaitable{stop_crane_.Reset(*this, stop_arena_.first)});
+        , stop_crane_{*this} {
     }
 
     Epoll(const Epoll&) = delete;
@@ -46,13 +44,8 @@ namespace async {
           tl::in_place, ConstructionToken{}, epoll_fd};
     }
 
-    std::error_code DispatchStop() noexcept {
-      static constexpr std::uint64_t val = 1;
-      int ret = stop_crane_.Add(*this, val).Execute();
-      if (ret < 0) {
-        return std::make_error_code(std::errc(-ret));
-      }
-      return {};
+    void DispatchStop() noexcept {
+      stop_crane_.PullStop();
     }
 
     bool PrepareDispatch(Awaitable auto& awaitable) noexcept {
@@ -98,6 +91,9 @@ namespace async {
 
       for (std::size_t i = 0; i < res; ++i) {
         auto awaitable = static_cast<AwaitableBase*>(events[i].data.ptr);
+        if (stop_crane_.RefersToThis(awaitable)) {
+          return tl::unexpected{std::error_code{}};
+        }
         awaitable->SetResult(awaitable->Execute());
         return awaitable;
       }
@@ -107,8 +103,7 @@ namespace async {
 
   private:
     IoObject epoll_;
-    EventFd stop_crane_;
-    std::pair<std::uint64_t, std::unique_ptr<AwaitableBase>> stop_arena_;
+    StopCrane<Epoll> stop_crane_;
   };
 
 } // namespace async

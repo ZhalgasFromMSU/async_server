@@ -5,13 +5,13 @@ module;
 module async;
 
 template<typename IoProvider>
-void ProviderTest(IoProvider& provider) {
+void TestTrivial(IoProvider& provider) {
   auto mb_pipe = async::Pipe::Create();
   ASSERT_TRUE(mb_pipe) << mb_pipe.error().message();
 
   char buffer[10];
-  auto read_awaitable = mb_pipe->Read(provider, buffer, 5);
-  auto write_awaitable = mb_pipe->Write(provider, "123", 3);
+  auto read_awaitable = mb_pipe->ReadAsync(provider, buffer, 5);
+  auto write_awaitable = mb_pipe->WriteAsync(provider, "123", 3);
 
   write_awaitable.await_suspend({});
   auto mb_write_res = provider.Dequeue();
@@ -28,24 +28,34 @@ TEST(IoUring, Trivial) {
   auto mb_uring = async::IoUring::Create();
   ASSERT_TRUE(mb_uring) << mb_uring.error().message();
 
-  ProviderTest(*mb_uring);
+  TestTrivial(*mb_uring);
 }
 
 TEST(Epoll, Trivial) {
   auto mb_epoll = async::Epoll::Create();
   ASSERT_TRUE(mb_epoll) << mb_epoll.error().message();
 
-  ProviderTest(*mb_epoll);
+  TestTrivial(*mb_epoll);
+}
+
+template<typename IoProvider>
+void TestStop(IoProvider& dispatcher) {
+  dispatcher.DispatchStop();
+  auto stop_res = dispatcher.Dequeue();
+  ASSERT_FALSE(stop_res);
+  ASSERT_FALSE(stop_res.error());
 }
 
 TEST(Epoll, Stop) {
   auto mb_epoll = async::Epoll::Create();
   ASSERT_TRUE(mb_epoll) << mb_epoll.error().message();
 
-  ASSERT_FALSE(mb_epoll->DispatchStop());
+  TestStop(*mb_epoll);
+}
 
-  auto stop_res = mb_epoll->Dequeue();
-  ASSERT_TRUE(stop_res) << stop_res.error().message();
+TEST(IoUring, Stop) {
+  auto mb_uring = async::IoUring::Create();
+  ASSERT_TRUE(mb_uring) << mb_uring.error().message();
 
-  ASSERT_EQ((*stop_res)->Result(), 8);
+  TestStop(*mb_uring);
 }

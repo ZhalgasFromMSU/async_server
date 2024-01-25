@@ -10,6 +10,7 @@ export module async:iouring;
 import :ioobject;
 import :awaitable;
 import :operation;
+import :eventfd;
 
 namespace async {
 
@@ -22,7 +23,8 @@ namespace async {
 
   public:
     IoUring(ConstructionToken, io_uring&& ring) noexcept
-        : ring_{std::move(ring)} {
+        : ring_{std::move(ring)}
+        , stop_crane_{*this} {
     }
 
     ~IoUring() {
@@ -44,7 +46,11 @@ namespace async {
           tl::in_place, ConstructionToken{}, std::move(ring)};
     }
 
-    bool PrepareDispatch(Awaitable auto& awaitable) noexcept {
+    void DispatchStop() noexcept {
+      stop_crane_.PullStop();
+    }
+
+    bool PrepareDispatch(Awaitable auto&) noexcept {
       return true;
     }
 
@@ -68,6 +74,9 @@ namespace async {
       }
 
       auto awaitable = static_cast<AwaitableBase*>(io_uring_cqe_get_data(cqe));
+      if (stop_crane_.RefersToThis(awaitable)) {
+        return tl::unexpected{std::error_code{}};
+      }
       awaitable->SetResult(cqe->res);
       io_uring_cqe_seen(&ring_, cqe);
       return awaitable;
@@ -98,6 +107,7 @@ namespace async {
 
     static constexpr unsigned ring_size_ = 1000;
     io_uring ring_;
+    StopCrane<IoUring> stop_crane_;
   };
 
 } // namespace async

@@ -10,25 +10,20 @@ TEST(Pipe, Trivial) {
   auto mb_pipe = async::Pipe::Create();
   ASSERT_TRUE(mb_pipe) << mb_pipe.error().message();
 
-  auto mb_epoll = async::Epoll::Create();
-  ASSERT_TRUE(mb_epoll) << mb_epoll.error().message();
-
   char buf[10];
-  auto read_awaitable = mb_pipe->Read(*mb_epoll, buf, 10);
-  auto write_awaitable = mb_pipe->Write(*mb_epoll, "123", 3);
-
   {
-    int res = read_awaitable.Execute();
+    int res = mb_pipe->Read(buf, 10);
     ASSERT_TRUE(res == -EAGAIN || res == -EWOULDBLOCK);
   }
 
   {
-    int res = write_awaitable.Execute();
+    int res = mb_pipe->Write("123", 3);
     ASSERT_EQ(res, 3);
   }
 
   {
-    int res = read_awaitable.Execute();
+    int res = mb_pipe->Read(buf, 10);
     ASSERT_EQ(res, 3);
+    ASSERT_EQ(strncmp(buf, "123", 3), 0);
   }
 }

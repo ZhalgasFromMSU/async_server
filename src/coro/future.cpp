@@ -66,7 +66,7 @@ namespace async {
     }
 
   private:
-    friend Promise<T>;
+    friend PromiseBase<T>;
 
     explicit Future(promise_type& promise) noexcept
         : promise_{promise} {
@@ -77,7 +77,7 @@ namespace async {
 
   template<typename T>
   Future<T> PromiseBase<T>::get_return_object() noexcept {
-    return Future<T>{*this};
+    return Future<T>{static_cast<Promise<T>&>(*this)};
   }
 
 } // namespace async

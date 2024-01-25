@@ -1,6 +1,6 @@
 module;
 
-#include <iostream>
+#include <cassert>
 #include <thread>
 
 export module async:eventloop;
@@ -15,28 +15,30 @@ namespace async {
     }
 
     ~EventLoop() {
-      Stop();
+      StopWorker();
     }
 
-    void Start() noexcept {
-      worker_ = std::jthread{[&] {
-        while (!stopped_.test(std::memory_order_relaxed)) {
-          if (std::error_code err = dispatcher_.Dequeue()) {
-            std::cerr << err.message() << std::endl;
-            std::terminate();
+    void StartWorker() noexcept {
+      worker_ = std::jthread{[this] {
+        while (true) {
+          auto mb_awaitable = dispatcher_.Dequeue();
+          if (!mb_awaitable) {
+            assert(!mb_awaitable.error() && "Dispatcher returned error");
+            break;
           }
+
+          (*mb_awaitable)->ResumeCoro();
         }
       }};
     }
 
-    void Stop() noexcept {
-      stopped_.test_and_set(std::memory_order_relaxed);
+    void StopWorker() noexcept {
+      dispatcher_.DispatchStop();
     }
 
   private:
     IoDispatcher& dispatcher_;
     std::jthread worker_;
-    std::atomic_flag stopped_;
   };
 
 } // namespace async

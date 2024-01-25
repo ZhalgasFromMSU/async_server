@@ -36,18 +36,32 @@ namespace async {
       return std::move(pipe);
     }
 
+    int Read(void* buffer, std::size_t num) noexcept {
+      return OperationExecutable{BuildOp<OpType::kRead>(arg::fd{read_end_.fd()},
+                                                        arg::buffer{buffer},
+                                                        arg::count{num})}
+          .Execute();
+    }
+
     template<typename IoProvider>
-    Awaitable auto Read(IoProvider& dispatcher, void* buffer,
-                        std::size_t num) noexcept {
+    Awaitable auto ReadAsync(IoProvider& dispatcher, void* buffer,
+                             std::size_t num) noexcept {
       return OperationAwaitable{dispatcher,
                                 BuildOp<OpType::kRead>(arg::buffer{buffer},
                                                        arg::fd{read_end_.fd()},
                                                        arg::count{num})};
     }
 
+    int Write(const void* buffer, std::size_t num) noexcept {
+      return OperationExecutable{
+          BuildOp<OpType::kWrite>(arg::fd{write_end_.fd()},
+                                  arg::cbuffer{buffer}, arg::count{num})}
+          .Execute();
+    }
+
     template<typename IoDispatcher>
-    Awaitable auto Write(IoDispatcher& dispatcher, const void* buffer,
-                         std::size_t num) noexcept {
+    Awaitable auto WriteAsync(IoDispatcher& dispatcher, const void* buffer,
+                              std::size_t num) noexcept {
       return OperationAwaitable{
           dispatcher,
           BuildOp<OpType::kWrite>(arg::cbuffer{buffer},

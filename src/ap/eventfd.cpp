@@ -24,20 +24,41 @@ namespace async {
     }
 
     template<typename IoProvider>
-    Awaitable auto Add(IoProvider& dispatcher,
-                       const std::uint64_t& val) noexcept {
+    Awaitable auto AddAsync(IoProvider& dispatcher,
+                            const std::uint64_t& val) noexcept {
       return OperationAwaitable{
           dispatcher,
           BuildOp<OpType::kWrite>(arg::cbuffer{&val}, arg::fd{event_fd_.fd()},
                                   arg::count{sizeof(val)})};
     }
 
+    void Add(std::uint64_t val) noexcept {
+      int ret =
+          OperationExecutable{BuildOp<OpType::kWrite>(arg::fd{event_fd_.fd()},
+                                                      arg::cbuffer{&val},
+                                                      arg::count{sizeof(val)})}
+              .Execute();
+      assert(ret == sizeof(val) && "Incomplete write");
+    }
+
     template<typename IoProvider>
-    Awaitable auto Reset(IoProvider& dispatcher, std::uint64_t& ret) noexcept {
+    Awaitable auto ResetAsync(IoProvider& dispatcher,
+                              std::uint64_t& ret) noexcept {
       return OperationAwaitable{
           dispatcher,
           BuildOp<OpType::kRead>(arg::buffer{&ret}, arg::fd{event_fd_.fd()},
                                  arg::count{sizeof(ret)})};
+    }
+
+    std::uint64_t Reset() noexcept {
+      std::uint64_t ret;
+      int code =
+          OperationExecutable{BuildOp<OpType::kRead>(arg::fd{event_fd_.fd()},
+                                                     arg::buffer{&ret},
+                                                     arg::count{sizeof(ret)})}
+              .Execute();
+      assert(code == sizeof(ret) && "Incomplete read");
+      return ret;
     }
 
   private:
@@ -46,6 +67,30 @@ namespace async {
     }
 
     IoObject event_fd_;
+  };
+
+  export template<typename IoProvider>
+  class StopCrane {
+  public:
+    explicit StopCrane(IoProvider& dispatcher) noexcept
+        : event_fd_{EventFd::Create().value()}
+        , awaitable_{event_fd_.ResetAsync(dispatcher, res_)} {
+      awaitable_.await_suspend({});
+    }
+
+    void PullStop() noexcept {
+      event_fd_.Add(1);
+    }
+
+    bool RefersToThis(AwaitableBase* base) noexcept {
+      return base == static_cast<AwaitableBase*>(&awaitable_);
+    }
+
+  private:
+    EventFd event_fd_;
+    uint64_t res_;
+    decltype(event_fd_.ResetAsync(std::declval<IoProvider&>(),
+                                  res_)) awaitable_;
   };
 
 } // namespace async
