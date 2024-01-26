@@ -1,17 +1,8 @@
 #include <iostream>
-#include <memory>
 
-struct A {
-    const std::unique_ptr<int> i;
-};
-
-
-A foo() {
-    return A{};
-}
+import Mod;
 
 int main() {
-    A a = foo();
-    A b = std::move(a);
-    return 0;
+  std::cout << foo(1) << std::endl;
+  return 0;
 }

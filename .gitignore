@@ -1,6 +1,5 @@
-.vscode/*
-.cache/*
+*/.vscode/*
+*/.cache/*
+*/build/*
 build/*
-a.out
-*/main
-example/
+.cache/*
