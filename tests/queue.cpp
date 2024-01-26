@@ -22,7 +22,9 @@ TEST(Queue, Pop) {
       std::terminate();
     }
   }};
-  std::jthread producer{[&] { queue.Push(1); }};
+  std::jthread producer{[&] {
+    queue.Push(1);
+  }};
 }
 
 TEST(Queue, SpSc) {
@@ -52,8 +54,9 @@ TEST(Queue, SpMc) {
   {
     std::vector<std::jthread> consumers;
     for (std::size_t i = 0; i < n_consumers; ++i) {
-      consumers.emplace_back(
-          [&] { sum.fetch_add(queue.Pop(), std::memory_order_relaxed); });
+      consumers.emplace_back([&] {
+        sum.fetch_add(queue.Pop(), std::memory_order_relaxed);
+      });
     }
 
     std::jthread producer{[&] {
@@ -102,8 +105,9 @@ TEST(Queue, MpMc) {
     }
   }
 
-  ASSERT_TRUE(
-      std::ranges::all_of(flags, [](auto& flag) { return flag.test(); }));
+  ASSERT_TRUE(std::ranges::all_of(flags, [](auto& flag) {
+    return flag.test();
+  }));
 }
 
 TEST(Queue, PingPong) {
